@@ -15,7 +15,10 @@ const navItems = [
 
 export const Sidebar = () => (
   <aside className="w-64 border-r border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
-    <h1 className="mb-6 text-lg font-bold">TNI AU Aircrew</h1>
+    <div className="mb-6 flex items-center gap-3">
+      <img src="/logo.svg" alt="TNI AU Aircrew Logo" className="h-10 w-10 rounded-lg" />
+      <h1 className="text-lg font-bold">TNI AU Aircrew</h1>
+    </div>
     <nav className="space-y-2">
       {navItems.map(([to, label]) => (
         <NavLink
