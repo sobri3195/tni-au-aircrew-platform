@@ -77,3 +77,6 @@ Platform sudah memiliki fondasi yang baik untuk operasi harian: dashboard, e-log
 
 ## Penutup
 Dokumen ini dapat menjadi baseline discovery untuk backlog Q2–Q3. Fokus utama adalah menggeser platform dari sekadar pencatatan data menjadi **decision-support system** yang mempercepat keputusan operasi dan meningkatkan keselamatan penerbangan.
+
+## Artefak Tambahan
+- Rancangan detail untuk Prompt 2 tersedia di `docs/predictive-safety-engine.md`.
