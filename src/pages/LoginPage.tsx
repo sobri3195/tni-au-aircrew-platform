@@ -13,7 +13,13 @@ export const LoginPage = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-slate-100">
       <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-6">
-        <h2 className="mb-2 text-2xl font-bold">Mock Login - Aircrew Platform</h2>
+        <div className="mb-4 flex items-center gap-3">
+          <img src="/logo.svg" alt="TNI AU Aircrew Logo" className="h-12 w-12 rounded-lg" />
+          <div>
+            <h2 className="text-2xl font-bold">Mock Login - Aircrew Platform</h2>
+            <p className="text-xs text-slate-400">TNI AU Aircrew Digital Operations</p>
+          </div>
+        </div>
         <p className="mb-4 text-sm text-slate-400">Pilih role operasional.</p>
         <select className="input mb-4" value={role} onChange={(e) => setRole(e.target.value as Role)}>
           {roles.map((item) => <option key={item}>{item}</option>)}
