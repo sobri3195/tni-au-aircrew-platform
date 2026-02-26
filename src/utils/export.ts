@@ -1,6 +1,6 @@
-export const exportCsv = (filename: string, rows: Record<string, unknown>[]) => {
+export const exportCsv = <T extends object>(filename: string, rows: T[]) => {
   if (!rows.length) return;
-  const headers = Object.keys(rows[0]);
+  const headers = Object.keys(rows[0]) as Array<keyof T>;
   const csv = [headers.join(','), ...rows.map((r) => headers.map((h) => JSON.stringify(r[h] ?? '')).join(','))].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
