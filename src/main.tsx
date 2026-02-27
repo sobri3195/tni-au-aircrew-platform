@@ -6,13 +6,23 @@ import { AppProvider } from './contexts/AppContext';
 
 const EXTENSION_SCRIPT_PARSE_ERROR = "Unexpected token 'export'";
 
+const isBenignExtensionParseError = (filename = '', message = '') => filename.includes('webpage_content_reporter.js') && message.includes(EXTENSION_SCRIPT_PARSE_ERROR);
+
 window.addEventListener('error', (event) => {
-  const isExtensionParseError = event.filename?.includes('webpage_content_reporter.js') && event.message.includes(EXTENSION_SCRIPT_PARSE_ERROR);
+  const isExtensionParseError = isBenignExtensionParseError(event.filename, event.message);
 
   if (isExtensionParseError) {
     event.preventDefault();
   }
 });
+
+window.onerror = (message, source) => {
+  if (isBenignExtensionParseError(source, String(message))) {
+    return true;
+  }
+
+  return false;
+};
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
