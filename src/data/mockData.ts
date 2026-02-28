@@ -25,6 +25,30 @@ const pilots: PilotProfile[] = [
     ifrCurrencyUntil: daysFromNow(5),
     emergencyTrainingDate: daysFromNow(-200),
     status: 'Limited'
+  },
+  {
+    id: 'P003',
+    name: 'Lettu Pnb Dimas Prasetyo',
+    rank: 'Lettu',
+    wing: 'Skadron Udara 15',
+    aircraftType: 'T-50i',
+    ratings: ['Formation', 'Night Ops'],
+    nvgCurrencyUntil: daysFromNow(20),
+    ifrCurrencyUntil: daysFromNow(34),
+    emergencyTrainingDate: daysFromNow(-45),
+    status: 'Active'
+  },
+  {
+    id: 'P004',
+    name: 'Kapten Pnb Satria Nugroho',
+    rank: 'Kapten',
+    wing: 'Skadron Udara 17',
+    aircraftType: 'Boeing 737',
+    ratings: ['VIP Transport', 'IFR'],
+    nvgCurrencyUntil: daysFromNow(4),
+    ifrCurrencyUntil: daysFromNow(14),
+    emergencyTrainingDate: daysFromNow(-330),
+    status: 'Grounded'
   }
 ];
 
@@ -32,12 +56,12 @@ const sortieTypes = ['CAP', 'Navigation', 'Training', 'Formation', 'Night Ops'];
 const aircrafts = ['F-16C TS-1601', 'T-50i TT-5008', 'CN-295 A-2901'];
 
 const createLogbook = (): LogbookEntry[] =>
-  Array.from({ length: 40 }).map((_, i) => {
+  Array.from({ length: 80 }).map((_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - i * 2);
     return {
       id: `L${i + 1}`,
-      pilotId: i % 2 ? 'P001' : 'P002',
+      pilotId: pilots[i % pilots.length].id,
       date: date.toISOString(),
       aircraft: aircrafts[i % aircrafts.length],
       sortieType: sortieTypes[i % sortieTypes.length],
@@ -50,7 +74,7 @@ const createLogbook = (): LogbookEntry[] =>
   });
 
 const createSchedule = (): ScheduleItem[] =>
-  Array.from({ length: 15 }).map((_, i) => {
+  Array.from({ length: 30 }).map((_, i) => {
     const start = new Date();
     start.setDate(start.getDate() + i - 5);
     start.setHours(7 + (i % 4) * 2, 0, 0, 0);
@@ -58,26 +82,26 @@ const createSchedule = (): ScheduleItem[] =>
     end.setHours(start.getHours() + 2);
     return {
       id: `S${i + 1}`,
-      title: `Mission ${i + 1}`,
+      title: `${i % 4 === 0 ? 'Briefing' : 'Mission'} ${i + 1}`,
       start: start.toISOString(),
       end: end.toISOString(),
-      category: i % 2 ? 'Sortie' : 'Training',
+      category: i % 4 === 0 ? 'Briefing' : i % 2 ? 'Sortie' : 'Training',
       base: i % 2 ? 'Lanud Iswahjudi' : 'Lanud Halim'
     };
   });
 
-const notams: Notam[] = Array.from({ length: 10 }).map((_, i) => ({
+const notams: Notam[] = Array.from({ length: 16 }).map((_, i) => ({
   id: `N${i + 1}`,
   area: i % 2 ? 'Madiun TMA' : 'Jakarta FIR',
   base: i % 2 ? 'Iswahjudi' : 'Halim',
-  content: `NOTAM ${i + 1}: Restricted airspace active from 0800Z to 1200Z.`,
-  acknowledged: false
+  content: `NOTAM ${i + 1}: ${i % 3 === 0 ? 'Runway maintenance window extended to 1500Z.' : 'Restricted airspace active from 0800Z to 1200Z.'}`,
+  acknowledged: i < 5
 }));
 
 const trainings: TrainingItem[] = ['CRM', 'Egress', 'SAR', 'Weapon System', 'Emergency Procedure', 'Flight Physiology', 'NVG Recurrent', 'IFR Check', 'Simulator', 'Live Firing'].map(
   (type, i) => ({
     id: `T${i + 1}`,
-    pilotId: i % 2 ? 'P001' : 'P002',
+    pilotId: pilots[i % pilots.length].id,
     type,
     completionDate: daysFromNow(-(i + 10)),
     expiryDate: daysFromNow(60 - i * 12),
@@ -85,12 +109,12 @@ const trainings: TrainingItem[] = ['CRM', 'Egress', 'SAR', 'Weapon System', 'Eme
   })
 );
 
-const incidents: Incident[] = Array.from({ length: 10 }).map((_, i) => ({
+const incidents: Incident[] = Array.from({ length: 14 }).map((_, i) => ({
   id: `I${i + 1}`,
   title: `Report ${i + 1} - ${i % 2 ? 'Bird strike risk' : 'Runway FOD observation'}`,
   type: i % 3 === 0 ? 'Incident' : i % 2 === 0 ? 'Near-Miss' : 'Hazard',
   date: daysFromNow(-(i + 1)),
-  status: i < 3 ? 'New' : i < 6 ? 'Reviewed' : 'Actioned',
+  status: i < 4 ? 'New' : i < 8 ? 'Reviewed' : i < 12 ? 'Actioned' : 'Closed',
   anonymous: i % 2 === 0
 }));
 
@@ -105,9 +129,38 @@ export const initialState: AppState = {
   notams,
   trainings,
   incidents,
-  orm: [],
-  notifications: [],
-  auditLogs: [],
+  orm: [
+    {
+      id: 'ORM1',
+      missionType: 'Night Intercept',
+      crewRestHours: 7,
+      weather: 'Marginal',
+      aircraftStatus: 'PMC',
+      threatLevel: 7,
+      riskLevel: 'High',
+      mitigation: 'Tambahkan alternate airfield + extra fuel reserve.',
+      createdAt: daysFromNow(-1)
+    },
+    {
+      id: 'ORM2',
+      missionType: 'Navigation Training',
+      crewRestHours: 9,
+      weather: 'Good',
+      aircraftStatus: 'FMC',
+      threatLevel: 3,
+      riskLevel: 'Low',
+      mitigation: 'Briefing ulang area restricted sebelum taxi.',
+      createdAt: daysFromNow(-3)
+    }
+  ],
+  notifications: [
+    { id: 'NF1', message: '2 NOTAM prioritas tinggi belum di-acknowledge.', level: 'warning' },
+    { id: 'NF2', message: '1 personel memasuki status IFR expiring < 14 hari.', level: 'critical' }
+  ],
+  auditLogs: [
+    { id: 'A1', timestamp: daysFromNow(-1), role: 'Ops Officer', action: 'CREATE', entity: 'Schedule', detail: 'Mission 8' },
+    { id: 'A2', timestamp: daysFromNow(-2), role: 'Flight Safety Officer', action: 'UPDATE', entity: 'NOTAM', detail: 'N3' }
+  ],
   messages: [
     {
       id: 'M1',
@@ -117,6 +170,15 @@ export const initialState: AppState = {
       body: 'Mission briefing moved to 0700 local.',
       tag: 'info',
       date: daysFromNow(-1)
+    },
+    {
+      id: 'M2',
+      from: 'Flight Safety Officer',
+      to: 'Pilot',
+      subject: 'Reminder ORM High Risk',
+      body: 'Pastikan mitigasi pada ORM1 selesai sebelum engine start.',
+      tag: 'urgent',
+      date: daysFromNow(0)
     }
   ]
 };
