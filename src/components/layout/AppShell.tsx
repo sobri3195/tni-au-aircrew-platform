@@ -1,12 +1,14 @@
-import { Outlet, useNavigate, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { useApp } from '../../contexts/AppContext';
 
 export const AppShell = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { state } = useApp();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -23,14 +25,30 @@ export const AppShell = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [navigate]);
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   if (!state.loggedIn) return <Navigate to="/login" replace />;
 
   return (
-    <div className="flex min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <Sidebar />
-      <main className="flex-1">
-        <Topbar />
-        <div className="p-4">
+    <div className="relative flex min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 flex md:hidden">
+          <button className="absolute inset-0 bg-slate-900/50" onClick={() => setMobileMenuOpen(false)} aria-label="Tutup menu" />
+          <div className="relative z-10 h-full">
+            <Sidebar mobile onNavigate={() => setMobileMenuOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      <main className="flex-1 min-w-0">
+        <Topbar onMenuToggle={() => setMobileMenuOpen(true)} />
+        <div className="p-3 md:p-4">
           <Outlet />
         </div>
       </main>
