@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
 
@@ -32,23 +32,26 @@ const defaultTask = (path: string): ChecklistItem[] =>
     done: false
   }));
 
+const parseTasks = (raw: string | null, path: string) => {
+  if (!raw) return defaultTask(path);
+  try {
+    return JSON.parse(raw) as ChecklistItem[];
+  } catch {
+    return defaultTask(path);
+  }
+};
+
 export const GenericFeaturePage = ({ title, description }: { title: string; description: string }) => {
   const location = useLocation();
   const storageKey = useMemo(() => getStorageKey(location.pathname), [location.pathname]);
 
-  const [tasks, setTasks] = useState<ChecklistItem[]>(() => {
-    const raw = localStorage.getItem(storageKey);
-    if (raw) {
-      try {
-        return JSON.parse(raw) as ChecklistItem[];
-      } catch {
-        return defaultTask(location.pathname);
-      }
-    }
-    return defaultTask(location.pathname);
-  });
+  const [tasks, setTasks] = useState<ChecklistItem[]>(() => parseTasks(localStorage.getItem(storageKey), location.pathname));
   const [newTask, setNewTask] = useState('');
   const [owner, setOwner] = useState('Pilot');
+
+  useEffect(() => {
+    setTasks(parseTasks(localStorage.getItem(storageKey), location.pathname));
+  }, [location.pathname, storageKey]);
 
   const progress = Math.round((tasks.filter((task) => task.done).length / Math.max(tasks.length, 1)) * 100);
 
@@ -81,14 +84,22 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
                   <p className={task.done ? 'line-through opacity-60' : ''}>{task.text}</p>
                   <p className="text-xs text-slate-500">Owner: {task.owner}</p>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={task.done}
-                  onChange={() => {
-                    const next = tasks.map((item) => (item.id === task.id ? { ...item, done: !item.done } : item));
-                    saveTasks(next);
-                  }}
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={task.done}
+                    onChange={() => {
+                      const next = tasks.map((item) => (item.id === task.id ? { ...item, done: !item.done } : item));
+                      saveTasks(next);
+                    }}
+                  />
+                  <button
+                    className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    onClick={() => saveTasks(tasks.filter((item) => item.id !== task.id))}
+                  >
+                    Hapus
+                  </button>
+                </div>
               </label>
             ))}
           </div>
