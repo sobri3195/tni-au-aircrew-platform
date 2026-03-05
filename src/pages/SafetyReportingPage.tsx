@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../contexts/AppContext';
 
 export const SafetyReportingPage = () => {
   const { state, dispatch } = useApp();
   const search = state.globalSearch.trim().toLowerCase();
-  const [title, setTitle] = useState('');
-  const [type, setType] = useState<'Hazard' | 'Near-Miss' | 'Incident'>('Hazard');
-  const [anonymous, setAnonymous] = useState(false);
+  const [title, setTitle] = useLocalStorageState('draft-safety-title', '');
+  const [type, setType] = useLocalStorageState<'Hazard' | 'Near-Miss' | 'Incident'>('draft-safety-type', 'Hazard');
+  const [anonymous, setAnonymous] = useLocalStorageState('draft-safety-anonymous', false);
 
   const visibleIncidents = state.incidents.filter((item) => {
     if (!search) return true;

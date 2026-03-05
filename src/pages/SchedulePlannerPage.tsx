@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../contexts/AppContext';
 
@@ -7,11 +8,11 @@ const isOverlap = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => aStart
 export const SchedulePlannerPage = () => {
   const { state, dispatch } = useApp();
   const search = state.globalSearch.trim().toLowerCase();
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<'Sortie' | 'Training' | 'Briefing'>('Sortie');
-  const [base, setBase] = useState('Lanud Iswahjudi');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+  const [title, setTitle] = useLocalStorageState('draft-schedule-title', '');
+  const [category, setCategory] = useLocalStorageState<'Sortie' | 'Training' | 'Briefing'>('draft-schedule-category', 'Sortie');
+  const [base, setBase] = useLocalStorageState('draft-schedule-base', 'Lanud Iswahjudi');
+  const [start, setStart] = useLocalStorageState('draft-schedule-start', '');
+  const [end, setEnd] = useLocalStorageState('draft-schedule-end', '');
 
   const weeklyItems = useMemo(() => {
     const now = new Date();

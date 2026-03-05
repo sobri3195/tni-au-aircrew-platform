@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { useApp } from '../contexts/AppContext';
 import { Badge } from '../components/ui/Badge';
 
@@ -17,7 +18,7 @@ const calcRisk = (rest: number, weather: string, status: string, threat: number)
 
 export const OrmPage = () => {
   const { state, dispatch } = useApp();
-  const [form, setForm] = useState({ missionType: 'Training Sortie', crewRestHours: 8, weather: 'Good', aircraftStatus: 'FMC', threatLevel: 1 });
+  const [form, setForm] = useLocalStorageState('draft-orm-form', { missionType: 'Training Sortie', crewRestHours: 8, weather: 'Good', aircraftStatus: 'FMC', threatLevel: 1 });
   const search = state.globalSearch.trim().toLowerCase();
   const result = calcRisk(form.crewRestHours, form.weather, form.aircraftStatus, form.threatLevel);
   const stats = useMemo(
