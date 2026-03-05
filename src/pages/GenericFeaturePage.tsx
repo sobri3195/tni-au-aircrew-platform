@@ -73,6 +73,39 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
     return tasks;
   }, [filter, tasks]);
 
+  const aiInsight = useMemo(() => {
+    const openTasks = tasks.filter((task) => !task.done);
+    const owners = new Set(openTasks.map((task) => task.owner));
+    const confidence = Math.max(65, 95 - openTasks.length * 3 - owners.size * 2);
+
+    const recommendations: { text: string; owner: string }[] = [];
+
+    if (openTasks.length >= 4) {
+      recommendations.push({ text: 'Bagi task terbuka menjadi 2 sprint eksekusi agar SLA tidak meleset', owner: 'Ops Officer' });
+    }
+
+    if (!openTasks.some((task) => /review|validasi|approval/i.test(task.text))) {
+      recommendations.push({ text: 'Tambahkan checkpoint validasi komandan sebelum status mission-ready', owner: 'Ops Officer' });
+    }
+
+    if (!openTasks.some((task) => /risk|risiko|mitigasi/i.test(task.text))) {
+      recommendations.push({ text: 'Masukkan task mitigasi risiko untuk mencegah blind spot operasional', owner: 'Flight Safety Officer' });
+    }
+
+    if (recommendations.length < 2) {
+      recommendations.push({ text: 'Rangkum lesson learned 1 paragraf dan publish ke knowledge hub', owner: 'Pilot' });
+    }
+
+    const narrative =
+      progress >= 80
+        ? 'AI menilai workflow hampir siap eksekusi. Fokuskan quality gate akhir untuk memastikan compliance.'
+        : progress >= 50
+          ? 'AI mendeteksi progres moderat. Bottleneck terbesar ada pada task lintas owner.'
+          : 'AI memberi sinyal beban kerja masih tinggi. Prioritaskan tugas berdampak misi terlebih dahulu.';
+
+    return { confidence, recommendations: recommendations.slice(0, 3), narrative };
+  }, [progress, tasks]);
+
   const saveTasks = (next: ChecklistItem[]) => {
     setTasks(next);
     localStorage.setItem(storageKey, JSON.stringify(next));
@@ -207,6 +240,36 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
             Reset ke Template
           </button>
         </div>
+      </div>
+
+      <div className="card">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="font-semibold">AI Workflow Optimizer</h3>
+          <Badge label={`Confidence ${aiInsight.confidence}%`} tone={aiInsight.confidence >= 80 ? 'green' : 'yellow'} />
+        </div>
+        <p className="text-sm text-slate-600 dark:text-slate-300">{aiInsight.narrative}</p>
+        <div className="mt-3 space-y-2">
+          {aiInsight.recommendations.map((recommendation) => (
+            <div key={recommendation.text} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+              <p>{recommendation.text}</p>
+              <p className="mt-1 text-xs text-slate-500">Owner disarankan: {recommendation.owner}</p>
+            </div>
+          ))}
+        </div>
+        <button
+          className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          onClick={() => {
+            const aiGenerated = aiInsight.recommendations.map((item, index) => ({
+              id: `ai-${Date.now()}-${index}`,
+              text: `[AI] ${item.text}`,
+              owner: item.owner,
+              done: false
+            }));
+            saveTasks([...aiGenerated, ...tasks]);
+          }}
+        >
+          Generate Task Otomatis dari AI
+        </button>
       </div>
     </section>
   );
