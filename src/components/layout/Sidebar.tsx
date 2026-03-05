@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { requestedFeatureModules } from '../../data/featureModules';
 
 type SidebarProps = {
   mobile?: boolean;
@@ -10,6 +11,20 @@ type NavItem = {
   label: string;
   icon: string;
 };
+
+
+const requestedNavGroups = Object.entries(
+  requestedFeatureModules.reduce<Record<string, NavItem[]>>((acc, module) => {
+    const groupItems = acc[module.group] ?? [];
+    groupItems.push({
+      to: module.path,
+      label: module.navLabel ?? module.title,
+      icon: module.icon
+    });
+    acc[module.group] = groupItems;
+    return acc;
+  }, {})
+).map(([label, items]) => ({ label, items }));
 
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
@@ -66,7 +81,8 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { to: '/reports', label: 'Reports', icon: '📊' },
       { to: '/admin', label: 'Admin Panel', icon: '🧰' }
     ]
-  }
+  },
+  ...requestedNavGroups
 ];
 
 export const Sidebar = ({ mobile = false, onNavigate }: SidebarProps) => (
