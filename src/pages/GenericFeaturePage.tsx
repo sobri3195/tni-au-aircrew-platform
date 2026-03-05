@@ -59,6 +59,9 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const [newTask, setNewTask] = useState('');
   const [owner, setOwner] = useState('Pilot');
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('all');
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [editingOwner, setEditingOwner] = useState('Pilot');
 
   useEffect(() => {
     setTasks(parseTasks(localStorage.getItem(storageKey), location.pathname));
@@ -109,6 +112,33 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const saveTasks = (next: ChecklistItem[]) => {
     setTasks(next);
     localStorage.setItem(storageKey, JSON.stringify(next));
+  };
+
+  const startEditTask = (task: ChecklistItem) => {
+    setEditingTaskId(task.id);
+    setEditingText(task.text);
+    setEditingOwner(task.owner);
+  };
+
+  const cancelEditTask = () => {
+    setEditingTaskId(null);
+    setEditingText('');
+    setEditingOwner('Pilot');
+  };
+
+  const submitEditTask = () => {
+    if (!editingTaskId || !editingText.trim()) return;
+    const next = tasks.map((item) =>
+      item.id === editingTaskId
+        ? {
+            ...item,
+            text: editingText.trim(),
+            owner: editingOwner
+          }
+        : item
+    );
+    saveTasks(next);
+    cancelEditTask();
   };
 
   return (
@@ -164,30 +194,63 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
             <div className="h-2 rounded-full bg-sky-600 transition-all" style={{ width: `${progress}%` }} />
           </div>
           <div className="space-y-2">
-            {filteredTasks.map((task) => (
-              <label key={task.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
-                <div className="min-w-0 flex-1">
-                  <p className={task.done ? 'line-through opacity-60' : ''}>{task.text}</p>
-                  <p className="text-xs text-slate-500">Owner: {task.owner}</p>
+            {filteredTasks.map((task) => {
+              const isEditing = editingTaskId === task.id;
+
+              return (
+                <div key={task.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <input className="input" value={editingText} onChange={(event) => setEditingText(event.target.value)} />
+                      <select className="input" value={editingOwner} onChange={(event) => setEditingOwner(event.target.value)}>
+                        {['Pilot', 'Ops Officer', 'Flight Safety Officer', 'Medical'].map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <button className="btn" onClick={cancelEditTask}>
+                          Batal
+                        </button>
+                        <button className="rounded-md bg-sky-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-800" onClick={submitEditTask}>
+                          Simpan
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className={task.done ? 'line-through opacity-60' : ''}>{task.text}</p>
+                        <p className="text-xs text-slate-500">Owner: {task.owner}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={task.done}
+                          onChange={() => {
+                            const next = tasks.map((item) => (item.id === task.id ? { ...item, done: !item.done } : item));
+                            saveTasks(next);
+                          }}
+                        />
+                        <button
+                          className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                          onClick={() => startEditTask(task)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                          onClick={() => saveTasks(tasks.filter((item) => item.id !== task.id))}
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </label>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={task.done}
-                    onChange={() => {
-                      const next = tasks.map((item) => (item.id === task.id ? { ...item, done: !item.done } : item));
-                      saveTasks(next);
-                    }}
-                  />
-                  <button
-                    className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                    onClick={() => saveTasks(tasks.filter((item) => item.id !== task.id))}
-                  >
-                    Hapus
-                  </button>
-                </div>
-              </label>
-            ))}
+              );
+            })}
           </div>
         </div>
 
