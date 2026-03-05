@@ -21,6 +21,14 @@ export const OrmPage = () => {
   const [form, setForm] = useLocalStorageState('draft-orm-form', { missionType: 'Training Sortie', crewRestHours: 8, weather: 'Good', aircraftStatus: 'FMC', threatLevel: 1 });
   const search = state.globalSearch.trim().toLowerCase();
   const result = calcRisk(form.crewRestHours, form.weather, form.aircraftStatus, form.threatLevel);
+  const validationError = useMemo(() => {
+    if (!form.missionType.trim()) return 'Mission type wajib diisi.';
+    if (form.crewRestHours < 0 || form.crewRestHours > 24) return 'Crew rest harus di antara 0-24 jam.';
+    if (form.threatLevel < 1 || form.threatLevel > 5) return 'Threat level harus 1 sampai 5.';
+    if (form.aircraftStatus === 'NMC' && !/emergency/i.test(form.missionType)) return 'Aircraft NMC hanya boleh untuk mission emergency.';
+    if (form.threatLevel >= 4 && form.crewRestHours < 6) return 'Threat level tinggi butuh crew rest minimal 6 jam.';
+    return '';
+  }, [form]);
   const stats = useMemo(
     () => ({
       high: state.orm.filter((item) => item.riskLevel === 'High').length,
@@ -46,7 +54,8 @@ export const OrmPage = () => {
         <select className="input" value={form.aircraftStatus} onChange={(e) => setForm((p) => ({ ...p, aircraftStatus: e.target.value }))}><option>FMC</option><option>PMC</option><option>NMC</option></select>
         <input className="input" type="number" min={1} max={5} value={form.threatLevel} onChange={(e) => setForm((p) => ({ ...p, threatLevel: Number(e.target.value) }))} />
         <button
-          className="rounded-lg bg-sky-700 px-3 py-2 font-semibold text-white"
+          className="rounded-lg bg-sky-700 px-3 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={Boolean(validationError)}
           onClick={() => {
             dispatch({
               type: 'ADD_ORM',
@@ -65,6 +74,7 @@ export const OrmPage = () => {
           }}
         >Save ORM</button>
       </div>
+      {validationError && <p className="text-sm text-rose-600">{validationError}</p>}
       <div className="card">
         <p className="mb-2">Risk Level: <Badge label={result.riskLevel} tone={result.riskLevel === 'High' ? 'red' : result.riskLevel === 'Medium' ? 'yellow' : 'green'} /></p>
         <p className="text-sm text-slate-600 dark:text-slate-300">Mitigation: {result.mitigation}</p>
