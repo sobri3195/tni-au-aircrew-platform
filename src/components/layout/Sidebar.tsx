@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { requestedFeatureModules } from '../../data/featureModules';
 import { useLocalStorageState } from '../../hooks/useLocalStorageState';
@@ -89,19 +90,37 @@ const requestedNavGroups = Object.entries(
   }, {})
 ).map(([label, items]) => ({ label, items }));
 
-const renderGroups = (groups: NavGroup[], query: string, onNavigate?: () => void) =>
+const renderGroups = (
+  groups: NavGroup[],
+  query: string,
+  groupOpenState: Record<string, boolean>,
+  onToggleGroup: (groupLabel: string) => void,
+  onNavigate?: () => void
+) =>
   groups.map((group) => {
     const filteredItems = group.items.filter((item) => item.label.toLowerCase().includes(query));
     if (filteredItems.length === 0) return null;
+
+    const isOpen = query.length > 0 ? true : (groupOpenState[group.label] ?? false);
+
     return (
-      <details key={group.label} className="group rounded-lg border border-slate-200/80 p-1 dark:border-slate-700/80" open>
-        <summary className="cursor-pointer list-none rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 transition group-open:text-sky-700 dark:group-open:text-sky-400">
+      <div key={group.label} className="rounded-lg border border-slate-200/80 p-1 dark:border-slate-700/80">
+        <button
+          type="button"
+          onClick={() => onToggleGroup(group.label)}
+          className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+          aria-expanded={isOpen}
+          aria-controls={`sidebar-group-${group.label}`}
+        >
           <div className="flex items-center justify-between">
             <span>{group.label}</span>
-            <span className="text-[10px]">{filteredItems.length}</span>
           </div>
-        </summary>
-        <div className="mt-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px]">{filteredItems.length}</span>
+            <span className={`text-[10px] transition ${isOpen ? 'rotate-180' : ''}`}>⌄</span>
+          </div>
+        </button>
+        <div id={`sidebar-group-${group.label}`} className={`mt-1 space-y-1 ${isOpen ? 'block' : 'hidden'}`}>
           {filteredItems.map((item) => (
             <NavLink
               key={item.to}
@@ -120,13 +139,29 @@ const renderGroups = (groups: NavGroup[], query: string, onNavigate?: () => void
             </NavLink>
           ))}
         </div>
-      </details>
+      </div>
     );
   });
 
 export const Sidebar = ({ mobile = false, onNavigate }: SidebarProps) => {
   const [navSearch, setNavSearch] = useLocalStorageState('sidebar-nav-search', '');
   const query = navSearch.trim().toLowerCase();
+  const initialOpenGroups = useMemo(
+    () =>
+      [...coreNavGroups, ...requestedNavGroups].reduce<Record<string, boolean>>((acc, group, index) => {
+        acc[group.label] = index === 0;
+        return acc;
+      }, {}),
+    []
+  );
+  const [groupOpenState, setGroupOpenState] = useState<Record<string, boolean>>(initialOpenGroups);
+
+  const onToggleGroup = (groupLabel: string) => {
+    setGroupOpenState((currentState) => ({
+      ...currentState,
+      [groupLabel]: !currentState[groupLabel]
+    }));
+  };
 
   return (
     <aside
@@ -147,11 +182,11 @@ export const Sidebar = ({ mobile = false, onNavigate }: SidebarProps) => {
       <nav className="space-y-4">
         <div className="space-y-2">
           <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Core Platform</p>
-          {renderGroups(coreNavGroups, query, onNavigate)}
+          {renderGroups(coreNavGroups, query, groupOpenState, onToggleGroup, onNavigate)}
         </div>
         <div className="space-y-2">
           <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Modul Penyempurnaan</p>
-          {renderGroups(requestedNavGroups, query, onNavigate)}
+          {renderGroups(requestedNavGroups, query, groupOpenState, onToggleGroup, onNavigate)}
         </div>
       </nav>
     </aside>
