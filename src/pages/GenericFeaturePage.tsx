@@ -19,7 +19,17 @@ const workflowPreset: Record<string, string[]> = {
   '/fatigue': ['Isi self-assessment', 'Hitung skor kelelahan', 'Terbitkan rekomendasi go/no-go'],
   '/inventory': ['Input serial equipment', 'Update serviceability', 'Jadwalkan penggantian'],
   '/maintenance': ['Import status armada', 'Prioritaskan aircraft NMC', 'Sinkronkan jadwal inspeksi'],
-  '/messaging': ['Buat pesan internal', 'Tag urgent/info', 'Lacak pesan terbaca']
+  '/messaging': ['Buat pesan internal', 'Tag urgent/info', 'Lacak pesan terbaca'],
+  '/mission-readiness': ['Validasi status personel inti', 'Cek kesiapan armada per misi', 'Terbitkan matriks Green/Amber/Red'],
+  '/combat-proficiency': ['Input hasil latihan taktis', 'Bandingkan skor antar periode', 'Flag area kemampuan kritis'],
+  '/simulator-scenarios': ['Pilih skenario ancaman', 'Jadwalkan slot simulator', 'Review hasil performa kru'],
+  '/emergency-drills': ['Pilih drill prioritas', 'Catat waktu respon setiap kru', 'Publish corrective action'],
+  '/flight-debrief': ['Unggah highlight sortie', 'Tulis lesson learned', 'Assign tindak lanjut ke owner'],
+  '/aeromedical-risk': ['Input indikator aeromedis', 'Deteksi tren risiko jangka pendek', 'Terbitkan rekomendasi fit-to-fly'],
+  '/mission-knowledge': ['Kurasi dokumen misi', 'Tambahkan replay/pembelajaran', 'Tandai materi wajib baca'],
+  '/leadership-board': ['Evaluasi mentoring wingman', 'Catat kontribusi safety culture', 'Review rencana coaching'],
+  '/readiness-forecast': ['Analisis data currency 30 hari', 'Prediksi bottleneck personel', 'Rilis alert kesiapan mingguan'],
+  '/career-path': ['Petakan target kualifikasi', 'Sinkronkan rencana training', 'Validasi milestone karier penerbang']
 };
 
 const getStorageKey = (path: string) => `feature-flow-${path.replace(/\//g, '-') || 'root'}`;
