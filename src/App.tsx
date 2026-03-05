@@ -12,8 +12,9 @@ import { ReportsPage } from './pages/ReportsPage';
 import { SafetyReportingPage } from './pages/SafetyReportingPage';
 import { SchedulePlannerPage } from './pages/SchedulePlannerPage';
 import { TrainingPage } from './pages/TrainingPage';
+import { requestedFeatureModules } from './data/featureModules';
 
-const routes = [
+const coreFeatureRoutes = [
   { path: '/profile', title: 'Pilot Profile & Qualification', description: 'Identitas, rating, NVG/IFR currency, emergency training, dan status Active/Limited/Grounded.' },
   { path: '/weather', title: 'Weather Brief', description: 'Data mock METAR/TAF style dan checklist reviewed.' },
   { path: '/duty-rest', title: 'Crew Duty & Rest Tracker', description: 'Pencatatan duty start/end dan rest violation checker.' },
@@ -35,6 +36,9 @@ const routes = [
   { path: '/readiness-forecast', title: 'Readiness Forecast', description: 'Prediksi kesiapan 14-30 hari ke depan untuk perencanaan komando skuadron.' },
   { path: '/career-path', title: 'Pilot Career Path Planner', description: 'Perencanaan jenjang kualifikasi penerbang dari basic mission ke mission commander.' }
 ];
+
+const routes = [...coreFeatureRoutes, ...requestedFeatureModules];
+
 
 export default function App() {
   return (
