@@ -5,6 +5,7 @@ import { Badge } from '../components/ui/Badge';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { moduleBlueprints } from '../data/moduleBlueprints';
 import { getModuleCrudSchema } from '../data/moduleCrudSchemas';
+import { requestedFeatureModules } from '../data/featureModules';
 
 type ChecklistItem = {
   id: string;
@@ -21,6 +22,17 @@ type ModuleRecord = {
   updatedAt: string;
 };
 
+type ModuleSyncSummary = {
+  path: string;
+  title: string;
+  group: string;
+  progress: number;
+  openTasks: number;
+  totalRecords: number;
+  openRecords: number;
+  updatedAt: string;
+};
+
 const workflowPreset: Record<string, string[]> = {
   '/profile': ['Update profil penerbang', 'Validasi status currency', 'Kirim verifikasi ke komandan'],
   '/weather': ['Review METAR/TAF', 'Tandai cuaca kritis', 'Publish briefing cuaca'],
@@ -29,6 +41,8 @@ const workflowPreset: Record<string, string[]> = {
 };
 
 const owners = ['Pilot', 'Ops Officer', 'Flight Safety Officer', 'Medical', 'Commander'];
+const sharedModuleStorageKey = 'feature-module-sync-v1';
+const moduleMetaMap = Object.fromEntries(requestedFeatureModules.map((module) => [module.path, { title: module.title, group: module.group }]));
 
 const getStorageKey = (path: string) => `feature-flow-${path.replace(/\//g, '-') || 'root'}`;
 const getCrudStorageKey = (path: string) => `feature-crud-${path.replace(/\//g, '-') || 'root'}`;
@@ -63,6 +77,15 @@ const parseRecords = (raw: string | null) => {
   }
 };
 
+const parseModuleSyncMap = (raw: string | null): Record<string, ModuleSyncSummary> => {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as Record<string, ModuleSyncSummary>;
+  } catch {
+    return {};
+  }
+};
+
 export const GenericFeaturePage = ({ title, description }: { title: string; description: string }) => {
   const location = useLocation();
   const storageKey = useMemo(() => getStorageKey(location.pathname), [location.pathname]);
@@ -77,6 +100,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const [filter, setFilter] = useLocalStorageState<'all' | 'open' | 'done'>(`feature-filter-${location.pathname}`, 'all');
   const [statusFilter, setStatusFilter] = useLocalStorageState(`feature-status-filter-${location.pathname}`, 'all');
   const [search, setSearch] = useLocalStorageState(`feature-search-${location.pathname}`, '');
+  const [moduleSyncMap, setModuleSyncMap] = useLocalStorageState<Record<string, ModuleSyncSummary>>(sharedModuleStorageKey, {});
   const [editId, setEditId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [statusValue, setStatusValue] = useState(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');
@@ -122,6 +146,49 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
 
     return { confidence, recommendations, narrative };
   }, [progress, tasks]);
+
+  useEffect(() => {
+    const openRecords = records.filter((record) => !/closed|done|resolved|synced|completed|validated/i.test(record.status)).length;
+    const moduleMeta = moduleMetaMap[location.pathname];
+    const nextSummary: ModuleSyncSummary = {
+      path: location.pathname,
+      title: moduleMeta?.title ?? title,
+      group: moduleMeta?.group ?? 'Core Module',
+      progress,
+      openTasks: tasks.filter((task) => !task.done).length,
+      totalRecords: records.length,
+      openRecords,
+      updatedAt: new Date().toISOString()
+    };
+
+    const current = moduleSyncMap[location.pathname];
+    if (
+      current &&
+      current.progress === nextSummary.progress &&
+      current.openTasks === nextSummary.openTasks &&
+      current.totalRecords === nextSummary.totalRecords &&
+      current.openRecords === nextSummary.openRecords &&
+      current.title === nextSummary.title &&
+      current.group === nextSummary.group
+    ) {
+      return;
+    }
+
+    setModuleSyncMap({
+      ...moduleSyncMap,
+      [location.pathname]: nextSummary
+    });
+  }, [location.pathname, moduleSyncMap, progress, records, setModuleSyncMap, tasks, title]);
+
+  const relatedModuleSummaries = useMemo(() => {
+    const moduleMeta = moduleMetaMap[location.pathname];
+    const entries = Object.values(parseModuleSyncMap(JSON.stringify(moduleSyncMap))).filter((item) => item.path !== location.pathname);
+    const prioritized = moduleMeta ? entries.filter((item) => item.group === moduleMeta.group) : entries;
+
+    return (prioritized.length > 0 ? prioritized : entries)
+      .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
+      .slice(0, 4);
+  }, [location.pathname, moduleSyncMap]);
 
   const saveTasks = (next: ChecklistItem[]) => {
     setTasks(next);
@@ -279,6 +346,30 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
           <button className="w-full rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800" onClick={submitRecord}>{editId ? 'Update Record' : 'Create Record'}</button>
           {editId && <button className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" onClick={resetForm}>Cancel Edit</button>}
         </div>
+      </div>
+
+      <div className="card space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold">Koneksi Antar Modul (localStorage)</h3>
+          <p className="text-xs text-slate-500">Shared key: {sharedModuleStorageKey}</p>
+        </div>
+        {relatedModuleSummaries.length === 0 ? (
+          <p className="text-sm text-slate-500">Belum ada modul lain yang aktif. Buka modul lain untuk mulai sinkronisasi lintas modul.</p>
+        ) : (
+          <div className="grid gap-2 md:grid-cols-2">
+            {relatedModuleSummaries.map((item) => (
+              <div key={item.path} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+                <p className="font-semibold">{item.title}</p>
+                <p className="text-xs text-slate-500">{item.group}</p>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  <Badge label={`Progress ${item.progress}%`} tone={item.progress >= 80 ? 'green' : item.progress >= 50 ? 'yellow' : 'red'} />
+                  <Badge label={`Open Task ${item.openTasks}`} tone={item.openTasks === 0 ? 'green' : item.openTasks > 3 ? 'red' : 'yellow'} />
+                  <Badge label={`Open Record ${item.openRecords}`} tone={item.openRecords === 0 ? 'green' : item.openRecords > 3 ? 'red' : 'yellow'} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {moduleBlueprint && (
