@@ -64,6 +64,50 @@ export const DashboardPage = () => {
 
   const missionState = statusTone(readinessScore);
 
+  const aiCopilot = useMemo(() => {
+    const unackedNotam = state.notams.filter((notam) => !notam.acknowledged).length;
+    const highRiskOrm = state.orm.filter((item) => item.riskLevel === 'High').length;
+    const expiringTrainings = state.trainings.filter((item) => daysUntil(item.expiryDate) < 30).length;
+    const nightSorties7d = state.logbook.filter(
+      (entry) => entry.dayNight === 'Night' && Date.now() - new Date(entry.date).getTime() <= 1000 * 60 * 60 * 24 * 7
+    ).length;
+
+    const riskIndex = Math.min(100, highRiskOrm * 20 + expiringTrainings * 7 + unackedNotam * 5 + nightSorties7d * 2);
+    const confidence = Math.max(62, 96 - Math.floor(riskIndex / 3));
+
+    const recommendations = [
+      {
+        label: `Acknowledge ${unackedNotam} NOTAM prioritas sebelum briefing berikutnya`,
+        active: unackedNotam > 0,
+        action: () => navigate('/notam')
+      },
+      {
+        label: `Review ${highRiskOrm} ORM high-risk dengan mitigation checklist AI`,
+        active: highRiskOrm > 0,
+        action: () => navigate('/orm')
+      },
+      {
+        label: `Lock slot training untuk ${expiringTrainings} item yang hampir kedaluwarsa`,
+        active: expiringTrainings > 0,
+        action: () => navigate('/training')
+      }
+    ].filter((item) => item.active);
+
+    const narrative =
+      riskIndex >= 70
+        ? 'AI menandai tren risiko meningkat. Komandan disarankan memprioritaskan kontrol risiko sebelum sortie kompleks.'
+        : riskIndex >= 45
+          ? 'AI mendeteksi risiko moderat dengan bottleneck pada compliance dan NOTAM acknowledgment.'
+          : 'AI menilai posture stabil. Fokuskan optimasi pada efisiensi briefing dan readiness training.';
+
+    return {
+      riskIndex,
+      confidence,
+      narrative,
+      recommendations
+    };
+  }, [state.notams, state.orm, state.trainings, state.logbook, navigate]);
+
   return (
     <section className="space-y-4">
       <div className="card border-0 bg-gradient-to-r from-sky-700 via-cyan-700 to-teal-600 text-white shadow-lg shadow-sky-900/20">
@@ -133,6 +177,27 @@ export const DashboardPage = () => {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
+        <div className="card">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="font-semibold">AI Mission Copilot</h3>
+            <Badge label={`Confidence ${aiCopilot.confidence}%`} tone={aiCopilot.confidence >= 80 ? 'green' : 'yellow'} />
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{aiCopilot.narrative}</p>
+          <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">Composite Risk Index</p>
+          <p className="text-2xl font-bold">{aiCopilot.riskIndex}/100</p>
+          <div className="mt-3 space-y-2">
+            {aiCopilot.recommendations.map((item) => (
+              <button
+                key={item.label}
+                className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-sm hover:border-sky-500 hover:bg-sky-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                onClick={item.action}
+              >
+                <span>{item.label}</span>
+                <span className="text-xs font-semibold text-sky-700 dark:text-sky-300">Eksekusi</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="card">
           <h3 className="mb-2 font-semibold">Rule-based Alerts</h3>
           <ul className="list-disc space-y-1 pl-5 text-sm">
