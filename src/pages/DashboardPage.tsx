@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { daysUntil } from '../utils/date';
+import { calculateReadinessAlerts, calculateReadinessComponents } from '../utils/readiness';
 import { Badge } from '../components/ui/Badge';
 
 const Card = ({ label, value, hint }: { label: string; value: string | number; hint?: string }) => (
@@ -34,33 +35,18 @@ export const DashboardPage = () => {
     return { hours30, sortiesWeek, aircraftAvailability, medicalValidity, currency };
   }, [state.logbook, state.profiles]);
 
-  const readinessBreakdown = useMemo(() => {
-    const profileCount = Math.max(state.profiles.length, 1);
-    const medical = Math.round((state.profiles.filter((p) => p.status === 'Active').length / profileCount) * 100);
-    const training = Math.max(20, 100 - state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length * 12);
-    const risk = Math.max(20, 100 - state.orm.filter((item) => item.riskLevel === 'High').length * 20);
-    const safety = Math.max(20, 100 - state.incidents.filter((i) => i.status === 'New').length * 10);
-    const availability = 78;
-    return [
-      { label: 'Medical', score: medical },
-      { label: 'Training', score: training },
-      { label: 'Operational Risk', score: risk },
-      { label: 'Safety Posture', score: safety },
-      { label: 'Fleet Availability', score: availability }
-    ];
-  }, [state.profiles, state.trainings, state.orm, state.incidents]);
+  const readinessBreakdown = useMemo(() => calculateReadinessComponents(state), [state]);
+
+  const readinessAlerts = useMemo(() => calculateReadinessAlerts(state), [state]);
 
   const pendingIncident = state.incidents.filter((i) => i.status === 'New').length;
-  const urgencyList = [
-    {
-      id: 'urgent-training',
-      label: 'Training expiry < 30 hari',
-      value: state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length,
-      onClick: () => navigate('/training')
-    },
-    { id: 'urgent-orm', label: 'ORM high risk', value: state.orm.filter((o) => o.riskLevel === 'High').length, onClick: () => navigate('/orm') },
-    { id: 'urgent-incident', label: 'Incident pending review', value: pendingIncident, onClick: () => navigate('/safety') }
-  ];
+  const urgencyList = readinessAlerts.map((alert) => ({
+    id: alert.id,
+    label: alert.message,
+    value: alert.value,
+    onClick: () => navigate(alert.route),
+    severity: alert.severity
+  }));
 
   const missionState = statusTone(readinessScore);
 
@@ -145,7 +131,10 @@ export const DashboardPage = () => {
             {readinessBreakdown.map((item) => (
               <div key={item.label}>
                 <div className="mb-1 flex items-center justify-between text-sm">
+                  <div>
                   <p>{item.label}</p>
+                  <p className="text-xs text-slate-500">{item.note}</p>
+                </div>
                   <p className="font-semibold">{item.score}%</p>
                 </div>
                 <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700">
@@ -162,6 +151,7 @@ export const DashboardPage = () => {
         <div className="card">
           <h3 className="mb-3 font-semibold">Priority Actions</h3>
           <div className="space-y-2">
+            {urgencyList.length === 0 && <p className="text-sm text-slate-500">Tidak ada alert prioritas tinggi saat ini.</p>}
             {urgencyList.map((item) => (
               <button
                 key={item.id}
@@ -169,7 +159,7 @@ export const DashboardPage = () => {
                 onClick={item.onClick}
               >
                 <span>{item.label}</span>
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold dark:bg-slate-800">{item.value}</span>
+                <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${item.severity === 'critical' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : item.severity === 'warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{item.value}</span>
               </button>
             ))}
           </div>
@@ -199,12 +189,13 @@ export const DashboardPage = () => {
           </div>
         </div>
         <div className="card">
-          <h3 className="mb-2 font-semibold">Rule-based Alerts</h3>
+          <h3 className="mb-2 font-semibold">Rule-based Alerts & Early Warning</h3>
           <ul className="list-disc space-y-1 pl-5 text-sm">
             <li>Training expiry &lt;30 hari: {state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length}</li>
             <li>Rest violation: 2 (mock)</li>
             <li>ORM High Risk: {state.orm.filter((o) => o.riskLevel === 'High').length}</li>
             <li>Incident pending review: {pendingIncident}</li>
+            <li>Prediksi overload sortie minggu ini: {state.schedule.filter((item) => item.category === 'Sortie').length > 9 ? 'High' : 'Normal'}</li>
           </ul>
         </div>
         <div className="card">

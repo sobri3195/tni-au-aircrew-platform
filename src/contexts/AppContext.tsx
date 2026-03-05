@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type Dispatch, type ReactNode } from 'react';
 import { initialState } from '../data/mockData';
 import type { AppState, AuditLogEntry, Incident, LogbookEntry, OrmAssessment, Role, ScheduleItem, Theme, TrainingItem } from '../types';
-import { daysUntil } from '../utils/date';
 import { readJsonStorage, writeJsonStorage } from '../utils/storage';
+import { calculateReadinessScore } from '../utils/readiness';
 
 type Action =
   | { type: 'LOGIN'; payload: Role }
@@ -80,13 +80,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.classList.toggle('dark', state.theme === 'dark');
   }, [state]);
 
-  const readinessScore = useMemo(() => {
-    const last30 = state.logbook.filter((e) => Date.now() - new Date(e.date).getTime() < 1000 * 60 * 60 * 24 * 30).reduce((s, e) => s + e.duration, 0);
-    const expiringTraining = state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length;
-    const openIncident = state.incidents.filter((i) => i.status === 'New').length;
-    const baseScore = Math.min(100, Math.round(last30 * 1.3));
-    return Math.max(20, baseScore - expiringTraining * 4 - openIncident * 3);
-  }, [state.logbook, state.trainings, state.incidents]);
+  const readinessScore = useMemo(() => calculateReadinessScore(state), [state]);
 
   return <AppContext.Provider value={{ state, dispatch, readinessScore }}>{children}</AppContext.Provider>;
 };
