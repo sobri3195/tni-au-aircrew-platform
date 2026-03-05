@@ -2,12 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
 import { moduleBlueprints } from '../data/moduleBlueprints';
+import { getModuleCrudSchema } from '../data/moduleCrudSchemas';
 
 type ChecklistItem = {
   id: string;
   text: string;
   done: boolean;
   owner: string;
+};
+
+type ModuleRecord = {
+  id: string;
+  status: string;
+  values: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
 };
 
 const workflowPreset: Record<string, string[]> = {
@@ -20,6 +29,7 @@ const workflowPreset: Record<string, string[]> = {
 const owners = ['Pilot', 'Ops Officer', 'Flight Safety Officer', 'Medical', 'Commander'];
 
 const getStorageKey = (path: string) => `feature-flow-${path.replace(/\//g, '-') || 'root'}`;
+const getCrudStorageKey = (path: string) => `feature-crud-${path.replace(/\//g, '-') || 'root'}`;
 
 const defaultTask = (path: string): ChecklistItem[] => {
   const modulePreset = moduleBlueprints[path]?.workflow;
@@ -42,23 +52,57 @@ const parseTasks = (raw: string | null, path: string) => {
   }
 };
 
+const parseRecords = (raw: string | null) => {
+  if (!raw) return [] as ModuleRecord[];
+  try {
+    return JSON.parse(raw) as ModuleRecord[];
+  } catch {
+    return [] as ModuleRecord[];
+  }
+};
+
 export const GenericFeaturePage = ({ title, description }: { title: string; description: string }) => {
   const location = useLocation();
   const storageKey = useMemo(() => getStorageKey(location.pathname), [location.pathname]);
+  const crudStorageKey = useMemo(() => getCrudStorageKey(location.pathname), [location.pathname]);
   const moduleBlueprint = moduleBlueprints[location.pathname];
+  const schema = useMemo(() => getModuleCrudSchema(location.pathname), [location.pathname]);
 
   const [tasks, setTasks] = useState<ChecklistItem[]>(() => parseTasks(localStorage.getItem(storageKey), location.pathname));
+  const [records, setRecords] = useState<ModuleRecord[]>(() => parseRecords(localStorage.getItem(crudStorageKey)));
   const [newTask, setNewTask] = useState('');
-  const [owner, setOwner] = useState('Pilot');
+  const [taskOwner, setTaskOwner] = useState('Pilot');
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [editId, setEditId] = useState<string | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [statusValue, setStatusValue] = useState(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');
 
   useEffect(() => {
     setTasks(parseTasks(localStorage.getItem(storageKey), location.pathname));
-  }, [location.pathname, storageKey]);
+    setRecords(parseRecords(localStorage.getItem(crudStorageKey)));
+    const emptyForm = Object.fromEntries(schema.fields.map((field) => [field.key, '']));
+    setFormValues(emptyForm);
+    setStatusValue(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');
+    setEditId(null);
+  }, [location.pathname, storageKey, crudStorageKey, schema]);
 
   const doneTask = tasks.filter((task) => task.done).length;
   const progress = Math.round((doneTask / Math.max(tasks.length, 1)) * 100);
   const filteredTasks = filter === 'all' ? tasks : tasks.filter((task) => (filter === 'done' ? task.done : !task.done));
+
+  const statusCounts = useMemo(() => records.reduce<Record<string, number>>((acc, record) => {
+    acc[record.status] = (acc[record.status] ?? 0) + 1;
+    return acc;
+  }, {}), [records]);
+
+  const filteredRecords = useMemo(() => records.filter((record) => {
+    const matchStatus = statusFilter === 'all' || record.status === statusFilter;
+    const values = Object.values(record.values).join(' ').toLowerCase();
+    const matchSearch = !search.trim() || values.includes(search.toLowerCase()) || record.status.toLowerCase().includes(search.toLowerCase());
+    return matchStatus && matchSearch;
+  }), [records, statusFilter, search]);
 
   const aiInsight = useMemo(() => {
     const openTasks = tasks.filter((task) => !task.done);
@@ -80,6 +124,40 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
     localStorage.setItem(storageKey, JSON.stringify(next));
   };
 
+  const saveRecords = (next: ModuleRecord[]) => {
+    setRecords(next);
+    localStorage.setItem(crudStorageKey, JSON.stringify(next));
+  };
+
+  const resetForm = () => {
+    setFormValues(Object.fromEntries(schema.fields.map((field) => [field.key, ''])));
+    setStatusValue(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');
+    setEditId(null);
+  };
+
+  const submitRecord = () => {
+    const hasRequiredMissing = schema.fields.some((field) => field.required && !formValues[field.key]?.trim());
+    if (hasRequiredMissing) return;
+
+    const now = new Date().toISOString();
+    if (editId) {
+      const next = records.map((record) => (record.id === editId ? { ...record, status: statusValue, values: formValues, updatedAt: now } : record));
+      saveRecords(next);
+      resetForm();
+      return;
+    }
+
+    const nextRecord: ModuleRecord = {
+      id: `${Date.now()}`,
+      status: statusValue,
+      values: formValues,
+      createdAt: now,
+      updatedAt: now
+    };
+    saveRecords([nextRecord, ...records]);
+    resetForm();
+  };
+
   return (
     <section className="space-y-4">
       <div className="card border-0 bg-gradient-to-r from-sky-700 to-cyan-600 text-white dark:border-sky-500">
@@ -92,15 +170,129 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         </div>
       </div>
 
-      {moduleBlueprint && (
-        <div className="grid gap-3 lg:grid-cols-3">
-          {moduleBlueprint.kpis.map((kpi) => (
-            <div key={kpi.label} className="card">
-              <p className="text-xs uppercase tracking-wide text-slate-500">{kpi.label}</p>
-              <p className="mt-2 text-2xl font-bold">{kpi.value}</p>
-              <Badge label={kpi.status === 'good' ? 'Normal' : kpi.status === 'watch' ? 'Watch' : 'Critical'} tone={kpi.status === 'good' ? 'green' : kpi.status === 'watch' ? 'yellow' : 'red'} />
+      <div className="grid gap-3 lg:grid-cols-4">
+        <div className="card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">{schema.entityName} Total</p>
+          <p className="mt-2 text-2xl font-bold">{records.length}</p>
+        </div>
+        <div className="card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Status Dominan</p>
+          <p className="mt-2 text-2xl font-bold">{Object.entries(statusCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '-'}</p>
+        </div>
+        <div className="card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Open Items</p>
+          <p className="mt-2 text-2xl font-bold">{records.filter((record) => !/closed|done|resolved|synced|completed|validated/i.test(record.status)).length}</p>
+        </div>
+        <div className="card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Storage</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">localStorage key: <span className="font-semibold">{crudStorageKey}</span></p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="card lg:col-span-2 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-semibold">CRUD {schema.entityName}</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <input className="input w-40" placeholder="Search" value={search} onChange={(event) => setSearch(event.target.value)} />
+              <select className="input w-40" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">All Status</option>
+                {(schema.statuses ?? []).map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
             </div>
-          ))}
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-slate-100 dark:bg-slate-800">
+                <tr>
+                  <th className="px-3 py-2">Status</th>
+                  {schema.fields.slice(0, 3).map((field) => <th key={field.key} className="px-3 py-2">{field.label}</th>)}
+                  <th className="px-3 py-2">Updated</th>
+                  <th className="px-3 py-2">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRecords.map((record) => (
+                  <tr key={record.id} className="border-t border-slate-100 dark:border-slate-700">
+                    <td className="px-3 py-2"><Badge label={record.status} tone={/critical|red|alert|violation|expired|conflict/i.test(record.status) ? 'red' : /watch|amber|pending|review/i.test(record.status) ? 'yellow' : 'green'} /></td>
+                    {schema.fields.slice(0, 3).map((field) => <td key={field.key} className="px-3 py-2">{record.values[field.key] || '-'}</td>)}
+                    <td className="px-3 py-2 text-xs">{new Date(record.updatedAt).toLocaleString('id-ID')}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          className="rounded bg-sky-100 px-2 py-1 text-sky-700"
+                          onClick={() => {
+                            setEditId(record.id);
+                            setFormValues(record.values);
+                            setStatusValue(record.status);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button className="rounded bg-rose-100 px-2 py-1 text-rose-700" onClick={() => saveRecords(records.filter((item) => item.id !== record.id))}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="card space-y-2">
+          <h3 className="font-semibold">{editId ? `Edit ${schema.entityName}` : `Tambah ${schema.entityName}`}</h3>
+          {(schema.statuses ?? ['Open']).length > 0 && (
+            <select className="input" value={statusValue} onChange={(event) => setStatusValue(event.target.value)}>
+              {(schema.statuses ?? ['Open']).map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
+          )}
+          {schema.fields.map((field) => {
+            if (field.type === 'select') {
+              return (
+                <select key={field.key} className="input" value={formValues[field.key] ?? ''} onChange={(event) => setFormValues({ ...formValues, [field.key]: event.target.value })}>
+                  <option value="">{field.label}</option>
+                  {(field.options ?? []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              );
+            }
+
+            if (field.type === 'textarea') {
+              return (
+                <textarea key={field.key} className="input min-h-[76px]" placeholder={field.label} value={formValues[field.key] ?? ''} onChange={(event) => setFormValues({ ...formValues, [field.key]: event.target.value })} />
+              );
+            }
+
+            return (
+              <input
+                key={field.key}
+                className="input"
+                type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                placeholder={field.label}
+                value={formValues[field.key] ?? ''}
+                onChange={(event) => setFormValues({ ...formValues, [field.key]: event.target.value })}
+              />
+            );
+          })}
+          <button className="w-full rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800" onClick={submitRecord}>{editId ? 'Update Record' : 'Create Record'}</button>
+          {editId && <button className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" onClick={resetForm}>Cancel Edit</button>}
+        </div>
+      </div>
+
+      {moduleBlueprint && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="card space-y-2">
+            <h3 className="font-semibold">Early Warning Alerts</h3>
+            {moduleBlueprint.alerts.map((alert) => (
+              <div key={alert} className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-100">{alert}</div>
+            ))}
+          </div>
+          <div className="card space-y-2">
+            <h3 className="font-semibold">Compliance Gate</h3>
+            {moduleBlueprint.complianceChecks.map((item) => (
+              <div key={item} className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-700/40 dark:bg-emerald-900/20 dark:text-emerald-100">{item}</div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -144,7 +336,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         <div className="card space-y-3">
           <h3 className="font-semibold">Kontrol Workflow</h3>
           <input className="input" placeholder="Tambah task" value={newTask} onChange={(event) => setNewTask(event.target.value)} />
-          <select className="input" value={owner} onChange={(event) => setOwner(event.target.value)}>
+          <select className="input" value={taskOwner} onChange={(event) => setTaskOwner(event.target.value)}>
             {owners.map((item) => (
               <option key={item} value={item}>{item}</option>
             ))}
@@ -153,7 +345,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
             className="w-full rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800"
             onClick={() => {
               if (!newTask.trim()) return;
-              saveTasks([{ id: `${Date.now()}`, text: newTask.trim(), owner, done: false }, ...tasks]);
+              saveTasks([{ id: `${Date.now()}`, text: newTask.trim(), owner: taskOwner, done: false }, ...tasks]);
               setNewTask('');
             }}
           >
@@ -162,23 +354,6 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
           <p className="rounded-lg bg-slate-100 p-2 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">{moduleBlueprint?.slaTarget ?? 'SLA belum ditentukan untuk modul ini.'}</p>
         </div>
       </div>
-
-      {moduleBlueprint && (
-        <div className="grid gap-3 lg:grid-cols-2">
-          <div className="card space-y-2">
-            <h3 className="font-semibold">Early Warning Alerts</h3>
-            {moduleBlueprint.alerts.map((alert) => (
-              <div key={alert} className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-100">{alert}</div>
-            ))}
-          </div>
-          <div className="card space-y-2">
-            <h3 className="font-semibold">Compliance Gate</h3>
-            {moduleBlueprint.complianceChecks.map((item) => (
-              <div key={item} className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-700/40 dark:bg-emerald-900/20 dark:text-emerald-100">{item}</div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="card">
         <div className="mb-2 flex items-center justify-between gap-2">
