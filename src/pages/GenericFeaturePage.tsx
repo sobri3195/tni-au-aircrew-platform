@@ -64,7 +64,8 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
     setTasks(parseTasks(localStorage.getItem(storageKey), location.pathname));
   }, [location.pathname, storageKey]);
 
-  const progress = Math.round((tasks.filter((task) => task.done).length / Math.max(tasks.length, 1)) * 100);
+  const doneTask = tasks.filter((task) => task.done).length;
+  const progress = Math.round((doneTask / Math.max(tasks.length, 1)) * 100);
 
   const filteredTasks = useMemo(() => {
     if (filter === 'open') return tasks.filter((task) => !task.done);
@@ -79,8 +80,8 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
 
   return (
     <section className="space-y-4">
-      <div className="card bg-gradient-to-r from-sky-700 to-cyan-600 text-white dark:border-sky-500">
-        <h2 className="text-xl font-bold">{title}</h2>
+      <div className="card border-0 bg-gradient-to-r from-sky-700 to-cyan-600 text-white dark:border-sky-500">
+        <h2 className="text-xl font-bold md:text-2xl">{title}</h2>
         <p className="mt-2 text-sm text-sky-100">{description}</p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Badge label="Fitur Aktif" tone="green" />
@@ -91,11 +92,26 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         </div>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Total Task</p>
+          <p className="mt-2 text-2xl font-bold">{tasks.length}</p>
+        </div>
+        <div className="card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Task Selesai</p>
+          <p className="mt-2 text-2xl font-bold text-emerald-600">{doneTask}</p>
+        </div>
+        <div className="card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Task Terbuka</p>
+          <p className="mt-2 text-2xl font-bold text-amber-600">{tasks.length - doneTask}</p>
+        </div>
+      </div>
+
       <div className="grid gap-3 lg:grid-cols-3">
         <div className="card lg:col-span-2">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-semibold">Alur Kerja Operasional</h3>
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               {[
                 { id: 'all', label: `Semua (${tasks.length})` },
                 { id: 'open', label: `Open (${tasks.filter((task) => !task.done).length})` },
@@ -116,8 +132,8 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
           </div>
           <div className="space-y-2">
             {filteredTasks.map((task) => (
-              <label key={task.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
-                <div>
+              <label key={task.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+                <div className="min-w-0 flex-1">
                   <p className={task.done ? 'line-through opacity-60' : ''}>{task.text}</p>
                   <p className="text-xs text-slate-500">Owner: {task.owner}</p>
                 </div>

@@ -35,6 +35,7 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
         <button className="btn md:hidden" onClick={onMenuToggle} aria-label="Buka menu navigasi">
           ☰ Menu
         </button>
+
         <div className="order-3 w-full md:order-none md:w-auto md:flex-1">
           <input
             className="input md:max-w-md"
@@ -43,18 +44,23 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
             placeholder="Global Search (Ctrl/Cmd+K)"
           />
         </div>
+
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
           {localTime}
         </div>
+
         <select className="input w-full sm:w-52 md:w-48" value={state.role} onChange={(e) => dispatch({ type: 'SET_ROLE', payload: e.target.value as Role })}>
           {roles.map((role) => (
             <option key={role}>{role}</option>
           ))}
         </select>
+
         <button className="btn" onClick={() => dispatch({ type: 'SET_THEME', payload: state.theme === 'dark' ? 'light' : 'dark' })}>
           {state.theme === 'dark' ? '☾ Dark' : '☀ Light'}
         </button>
-        <div className="md:ml-auto">
+
+        <div className="ml-auto flex items-center gap-2">
+          <div className="hidden rounded-lg bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 md:block dark:bg-emerald-900/50 dark:text-emerald-200">Readiness Online</div>
           <div className="rounded-lg bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-900/50 dark:text-rose-200">Alerts: {notifCount}</div>
         </div>
       </div>

@@ -70,8 +70,8 @@ export const DashboardPage = () => {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-cyan-100">Command Center</p>
-            <h2 className="mt-1 text-2xl font-bold">Dashboard Readiness</h2>
-            <p className="mt-2 text-sm text-cyan-50">Ringkasan kesiapan misi lintas personel, risiko, dan status armada.</p>
+            <h2 className="mt-1 text-2xl font-bold md:text-3xl">Dashboard Readiness</h2>
+            <p className="mt-2 max-w-2xl text-sm text-cyan-50">Ringkasan kesiapan misi lintas personel, risiko, dan status armada.</p>
           </div>
           <div className={`rounded-xl px-4 py-3 ${missionState.style}`}>
             <p className="text-xs font-semibold uppercase">Mission State</p>
@@ -80,7 +80,7 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Card label="Flight Hours (30 days)" value={kpi.hours30} />
         <Card label="Sorties This Week" value={kpi.sortiesWeek} />
         <Card label="Aircraft Availability" value={kpi.aircraftAvailability} />
@@ -90,7 +90,7 @@ export const DashboardPage = () => {
 
       <div className="grid gap-3 lg:grid-cols-3">
         <div className="card lg:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm text-slate-500">Unified Readiness Score</p>
               <p className="text-3xl font-bold">{readinessScore}/100</p>
@@ -144,11 +144,13 @@ export const DashboardPage = () => {
         </div>
         <div className="card">
           <h3 className="mb-2 font-semibold">Audit Log Terbaru</h3>
-          {state.auditLogs.slice(0, 5).map((log) => (
-            <p className="text-sm" key={log.id}>
-              {log.timestamp.slice(0, 16)} - [{log.action}] {log.entity}: {log.detail}
-            </p>
-          ))}
+          <div className="space-y-1">
+            {state.auditLogs.slice(0, 5).map((log) => (
+              <p className="text-sm" key={log.id}>
+                {log.timestamp.slice(0, 16)} - [{log.action}] {log.entity}: {log.detail}
+              </p>
+            ))}
+          </div>
         </div>
       </div>
     </section>
