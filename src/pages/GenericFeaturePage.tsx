@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { readJsonStorage } from '../utils/storage';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
@@ -69,8 +70,8 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const moduleBlueprint = moduleBlueprints[location.pathname];
   const schema = useMemo(() => getModuleCrudSchema(location.pathname), [location.pathname]);
 
-  const [tasks, setTasks] = useState<ChecklistItem[]>(() => parseTasks(localStorage.getItem(storageKey), location.pathname));
-  const [records, setRecords] = useState<ModuleRecord[]>(() => parseRecords(localStorage.getItem(crudStorageKey)));
+  const [tasks, setTasks] = useLocalStorageState<ChecklistItem[]>(storageKey, defaultTask(location.pathname));
+  const [records, setRecords] = useLocalStorageState<ModuleRecord[]>(crudStorageKey, []);
   const [newTask, setNewTask] = useLocalStorageState(`feature-draft-task-${location.pathname}`, '');
   const [taskOwner, setTaskOwner] = useLocalStorageState(`feature-draft-owner-${location.pathname}`, 'Pilot');
   const [filter, setFilter] = useLocalStorageState<'all' | 'open' | 'done'>(`feature-filter-${location.pathname}`, 'all');
@@ -81,13 +82,15 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const [statusValue, setStatusValue] = useState(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');
 
   useEffect(() => {
-    setTasks(parseTasks(localStorage.getItem(storageKey), location.pathname));
-    setRecords(parseRecords(localStorage.getItem(crudStorageKey)));
+    const storedTasks = readJsonStorage<ChecklistItem[]>(storageKey, defaultTask(location.pathname));
+    const storedRecords = readJsonStorage<ModuleRecord[]>(crudStorageKey, []);
+    setTasks(parseTasks(JSON.stringify(storedTasks), location.pathname));
+    setRecords(parseRecords(JSON.stringify(storedRecords)));
     const emptyForm = Object.fromEntries(schema.fields.map((field) => [field.key, '']));
     setFormValues(emptyForm);
     setStatusValue(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');
     setEditId(null);
-  }, [location.pathname, storageKey, crudStorageKey, schema]);
+  }, [crudStorageKey, location.pathname, schema, setRecords, setTasks, storageKey]);
 
   const doneTask = tasks.filter((task) => task.done).length;
   const progress = Math.round((doneTask / Math.max(tasks.length, 1)) * 100);
@@ -122,12 +125,10 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
 
   const saveTasks = (next: ChecklistItem[]) => {
     setTasks(next);
-    localStorage.setItem(storageKey, JSON.stringify(next));
   };
 
   const saveRecords = (next: ModuleRecord[]) => {
     setRecords(next);
-    localStorage.setItem(crudStorageKey, JSON.stringify(next));
   };
 
   const resetForm = () => {

@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { readJsonStorage, writeJsonStorage } from '../utils/storage';
 
-const readValue = <T,>(key: string, initialValue: T) => {
-  const raw = localStorage.getItem(key);
-  if (!raw) return initialValue;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return initialValue;
-  }
-};
+const readValue = <T,>(key: string, initialValue: T) => readJsonStorage(key, initialValue);
 
 export const useLocalStorageState = <T,>(key: string, initialValue: T) => {
   const [value, setValue] = useState<T>(() => readValue(key, initialValue));
@@ -22,8 +15,18 @@ export const useLocalStorageState = <T,>(key: string, initialValue: T) => {
   }, [initialValue, key]);
 
   useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value));
+    writeJsonStorage(key, value);
   }, [key, value]);
+
+  useEffect(() => {
+    const syncFromStorage = (event: StorageEvent) => {
+      if (event.key !== key) return;
+      setValue(readValue(key, initialValue));
+    };
+
+    window.addEventListener('storage', syncFromStorage);
+    return () => window.removeEventListener('storage', syncFromStorage);
+  }, [initialValue, key]);
 
   return [value, setValue] as const;
 };
