@@ -6,6 +6,7 @@ import { formatDate } from '../utils/date';
 export const LogbookPage = () => {
   const { state, dispatch } = useApp();
   const [form, setForm] = useState({ aircraft: 'F-16C TS-1601', sortieType: 'Training', duration: '1.5', dayNight: 'Day', ifr: false, nvg: false, remarks: '' });
+  const search = state.globalSearch.trim().toLowerCase();
 
   const totals = useMemo(() => {
     const total = state.logbook.reduce((a, b) => a + b.duration, 0);
@@ -13,6 +14,12 @@ export const LogbookPage = () => {
     const ifr = state.logbook.filter((e) => e.ifr).reduce((a, b) => a + b.duration, 0);
     return { total: total.toFixed(1), night: night.toFixed(1), ifr: ifr.toFixed(1) };
   }, [state.logbook]);
+
+  const visibleRows = useMemo(() => {
+    const rows = state.logbook.slice(0, 20);
+    if (!search) return rows;
+    return rows.filter((item) => `${item.aircraft} ${item.sortieType} ${item.dayNight} ${item.remarks}`.toLowerCase().includes(search));
+  }, [search, state.logbook]);
 
   return (
     <section className="space-y-4">
@@ -51,7 +58,7 @@ export const LogbookPage = () => {
         <input className="input" placeholder="Duration" value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} />
       </div>
       <Table headers={['Date', 'Aircraft', 'Type', 'Duration', 'Day/Night', 'IFR', 'NVG', 'Remarks']}>
-        {state.logbook.slice(0, 20).map((item) => (
+        {visibleRows.map((item) => (
           <tr key={item.id} className="border-t border-slate-200 dark:border-slate-700">
             <td className="px-3 py-2">{formatDate(item.date)}</td>
             <td className="px-3 py-2">{item.aircraft}</td>
@@ -63,6 +70,13 @@ export const LogbookPage = () => {
             <td className="px-3 py-2">{item.remarks}</td>
           </tr>
         ))}
+        {visibleRows.length === 0 && (
+          <tr>
+            <td className="px-3 py-5 text-center text-sm text-slate-500" colSpan={8}>
+              Tidak ada data logbook yang sesuai dengan global search.
+            </td>
+          </tr>
+        )}
       </Table>
     </section>
   );

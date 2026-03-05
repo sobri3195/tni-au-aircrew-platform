@@ -7,7 +7,12 @@ import { daysUntil } from '../utils/date';
 export const TrainingPage = () => {
   const { state, dispatch } = useApp();
   const [type, setType] = useState('CRM');
+  const search = state.globalSearch.trim().toLowerCase();
   const compliance = useMemo(() => Math.round((state.trainings.filter((t) => daysUntil(t.expiryDate) > 0).length / state.trainings.length) * 100), [state.trainings]);
+  const visibleTrainings = useMemo(() => {
+    if (!search) return state.trainings;
+    return state.trainings.filter((item) => `${item.type} ${item.pilotId} ${item.status}`.toLowerCase().includes(search));
+  }, [search, state.trainings]);
 
   return (
     <section className="space-y-4">
@@ -19,7 +24,7 @@ export const TrainingPage = () => {
       </div>
       <input className="input max-w-sm" value={type} onChange={(e) => setType(e.target.value)} placeholder="Training type" />
       <Table headers={['Type', 'Pilot', 'Completion', 'Expiry', 'Status']}>
-        {state.trainings.map((item) => {
+        {visibleTrainings.map((item) => {
           const days = daysUntil(item.expiryDate);
           return (
             <tr key={item.id} className="border-t border-slate-200 dark:border-slate-700">
@@ -31,6 +36,13 @@ export const TrainingPage = () => {
             </tr>
           );
         })}
+        {visibleTrainings.length === 0 && (
+          <tr>
+            <td className="px-3 py-5 text-center text-sm text-slate-500" colSpan={5}>
+              Tidak ada data training yang sesuai dengan global search.
+            </td>
+          </tr>
+        )}
       </Table>
     </section>
   );
