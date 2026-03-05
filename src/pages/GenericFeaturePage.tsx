@@ -48,12 +48,19 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const [tasks, setTasks] = useState<ChecklistItem[]>(() => parseTasks(localStorage.getItem(storageKey), location.pathname));
   const [newTask, setNewTask] = useState('');
   const [owner, setOwner] = useState('Pilot');
+  const [filter, setFilter] = useState<'all' | 'open' | 'done'>('all');
 
   useEffect(() => {
     setTasks(parseTasks(localStorage.getItem(storageKey), location.pathname));
   }, [location.pathname, storageKey]);
 
   const progress = Math.round((tasks.filter((task) => task.done).length / Math.max(tasks.length, 1)) * 100);
+
+  const filteredTasks = useMemo(() => {
+    if (filter === 'open') return tasks.filter((task) => !task.done);
+    if (filter === 'done') return tasks.filter((task) => task.done);
+    return tasks;
+  }, [filter, tasks]);
 
   const saveTasks = (next: ChecklistItem[]) => {
     setTasks(next);
@@ -67,18 +74,38 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         <p className="mt-2 text-sm text-sky-100">{description}</p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Badge label="Fitur Aktif" tone="green" />
-          <p className="text-sm">Progress alur: <span className="font-semibold">{progress}%</span></p>
+          <p className="text-sm">
+            Progress alur: <span className="font-semibold">{progress}%</span>
+          </p>
+          <Badge label={progress >= 80 ? 'Siap Eksekusi' : progress >= 50 ? 'On Progress' : 'Perlu Tindak Lanjut'} tone={progress >= 80 ? 'green' : progress >= 50 ? 'yellow' : 'red'} />
         </div>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
         <div className="card lg:col-span-2">
-          <h3 className="mb-3 font-semibold">Alur Kerja Operasional</h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-semibold">Alur Kerja Operasional</h3>
+            <div className="flex items-center gap-2 text-xs">
+              {[
+                { id: 'all', label: `Semua (${tasks.length})` },
+                { id: 'open', label: `Open (${tasks.filter((task) => !task.done).length})` },
+                { id: 'done', label: `Done (${tasks.filter((task) => task.done).length})` }
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  className={`rounded-md px-2 py-1 ${filter === item.id ? 'bg-sky-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}
+                  onClick={() => setFilter(item.id as 'all' | 'open' | 'done')}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="mb-4 h-2 rounded-full bg-slate-200 dark:bg-slate-700">
             <div className="h-2 rounded-full bg-sky-600 transition-all" style={{ width: `${progress}%` }} />
           </div>
           <div className="space-y-2">
-            {tasks.map((task) => (
+            {filteredTasks.map((task) => (
               <label key={task.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
                 <div>
                   <p className={task.done ? 'line-through opacity-60' : ''}>{task.text}</p>
@@ -106,8 +133,18 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         </div>
 
         <div className="card space-y-3">
-          <h3 className="font-semibold">Tambah Langkah Baru</h3>
-          <input className="input" placeholder="Contoh: Verifikasi data pilot" value={newTask} onChange={(event) => setNewTask(event.target.value)} />
+          <h3 className="font-semibold">Kontrol Workflow</h3>
+          <input
+            className="input"
+            placeholder="Contoh: Verifikasi data pilot"
+            value={newTask}
+            onChange={(event) => setNewTask(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' || !newTask.trim()) return;
+              saveTasks([{ id: `${Date.now()}`, text: newTask.trim(), owner, done: false }, ...tasks]);
+              setNewTask('');
+            }}
+          />
           <select className="input" value={owner} onChange={(event) => setOwner(event.target.value)}>
             {['Pilot', 'Ops Officer', 'Flight Safety Officer', 'Medical'].map((item) => (
               <option key={item} value={item}>
@@ -124,6 +161,15 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
             }}
           >
             Tambah Task
+          </button>
+          <button
+            className="btn w-full justify-center"
+            onClick={() => {
+              const next = tasks.map((item) => ({ ...item, done: true }));
+              saveTasks(next);
+            }}
+          >
+            Mark Semua Selesai
           </button>
           <button
             className="btn w-full justify-center"
