@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { moduleBlueprints } from '../data/moduleBlueprints';
 import { getModuleCrudSchema } from '../data/moduleCrudSchemas';
 
@@ -70,11 +71,11 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
 
   const [tasks, setTasks] = useState<ChecklistItem[]>(() => parseTasks(localStorage.getItem(storageKey), location.pathname));
   const [records, setRecords] = useState<ModuleRecord[]>(() => parseRecords(localStorage.getItem(crudStorageKey)));
-  const [newTask, setNewTask] = useState('');
-  const [taskOwner, setTaskOwner] = useState('Pilot');
-  const [filter, setFilter] = useState<'all' | 'open' | 'done'>('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [search, setSearch] = useState('');
+  const [newTask, setNewTask] = useLocalStorageState(`feature-draft-task-${location.pathname}`, '');
+  const [taskOwner, setTaskOwner] = useLocalStorageState(`feature-draft-owner-${location.pathname}`, 'Pilot');
+  const [filter, setFilter] = useLocalStorageState<'all' | 'open' | 'done'>(`feature-filter-${location.pathname}`, 'all');
+  const [statusFilter, setStatusFilter] = useLocalStorageState(`feature-status-filter-${location.pathname}`, 'all');
+  const [search, setSearch] = useLocalStorageState(`feature-search-${location.pathname}`, '');
   const [editId, setEditId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [statusValue, setStatusValue] = useState(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');

@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../contexts/AppContext';
 
 export const NotamPage = () => {
   const { state, dispatch } = useApp();
   const search = state.globalSearch.trim().toLowerCase();
-  const [areaFilter, setAreaFilter] = useState('All');
-  const [baseFilter, setBaseFilter] = useState('All');
+  const [areaFilter, setAreaFilter] = useLocalStorageState('notam-area-filter', 'All');
+  const [baseFilter, setBaseFilter] = useLocalStorageState('notam-base-filter', 'All');
 
   const areas = useMemo(() => ['All', ...new Set(state.notams.map((item) => item.area))], [state.notams]);
   const bases = useMemo(() => ['All', ...new Set(state.notams.map((item) => item.base))], [state.notams]);

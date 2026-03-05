@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { useApp } from '../contexts/AppContext';
 import { Table } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
@@ -6,7 +7,7 @@ import { daysUntil } from '../utils/date';
 
 export const TrainingPage = () => {
   const { state, dispatch } = useApp();
-  const [type, setType] = useState('CRM');
+  const [type, setType] = useLocalStorageState('draft-training-type', 'CRM');
   const search = state.globalSearch.trim().toLowerCase();
   const compliance = useMemo(() => Math.round((state.trainings.filter((t) => daysUntil(t.expiryDate) > 0).length / state.trainings.length) * 100), [state.trainings]);
   const visibleTrainings = useMemo(() => {

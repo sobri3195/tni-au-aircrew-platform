@@ -1,5 +1,6 @@
 import { Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useLocalStorageState } from '../../hooks/useLocalStorageState';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { useApp } from '../../contexts/AppContext';
@@ -8,7 +9,7 @@ export const AppShell = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { state } = useApp();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useLocalStorageState('app-mobile-menu-open', false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

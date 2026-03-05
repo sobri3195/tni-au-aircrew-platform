@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { useApp } from '../contexts/AppContext';
 import { Table } from '../components/ui/Table';
 import { formatDate } from '../utils/date';
 
 export const LogbookPage = () => {
   const { state, dispatch } = useApp();
-  const [form, setForm] = useState({ aircraft: 'F-16C TS-1601', sortieType: 'Training', duration: '1.5', dayNight: 'Day', ifr: false, nvg: false, remarks: '' });
+  const [form, setForm] = useLocalStorageState('draft-logbook-form', { aircraft: 'F-16C TS-1601', sortieType: 'Training', duration: '1.5', dayNight: 'Day', ifr: false, nvg: false, remarks: '' });
   const search = state.globalSearch.trim().toLowerCase();
 
   const totals = useMemo(() => {

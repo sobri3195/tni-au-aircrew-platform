@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { requestedFeatureModules } from '../../data/featureModules';
+import { useLocalStorageState } from '../../hooks/useLocalStorageState';
 
 type SidebarProps = {
   mobile?: boolean;
@@ -12,21 +13,12 @@ type NavItem = {
   icon: string;
 };
 
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
 
-const requestedNavGroups = Object.entries(
-  requestedFeatureModules.reduce<Record<string, NavItem[]>>((acc, module) => {
-    const groupItems = acc[module.group] ?? [];
-    groupItems.push({
-      to: module.path,
-      label: module.navLabel ?? module.title,
-      icon: module.icon
-    });
-    acc[module.group] = groupItems;
-    return acc;
-  }, {})
-).map(([label, items]) => ({ label, items }));
-
-const navGroups: { label: string; items: NavItem[] }[] = [
+const coreNavGroups: NavGroup[] = [
   {
     label: 'Alur Utama',
     items: [
@@ -81,28 +73,36 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { to: '/reports', label: 'Reports', icon: '📊' },
       { to: '/admin', label: 'Admin Panel', icon: '🧰' }
     ]
-  },
-  ...requestedNavGroups
+  }
 ];
 
-export const Sidebar = ({ mobile = false, onNavigate }: SidebarProps) => (
-  <aside
-    className={`h-full overflow-y-auto border-r border-slate-200/80 bg-white/95 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 ${mobile ? 'w-80 max-w-[85vw]' : 'w-72'}`}
-  >
-    <div className="mb-6 rounded-xl border border-sky-100 bg-gradient-to-r from-sky-50 to-cyan-50 p-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900">
-      <div className="flex items-center gap-3">
-        <img src="/logo.svg" alt="TNI AU Aircrew Logo" className="h-10 w-10 rounded-lg" />
-        <div>
-          <h1 className="text-lg font-bold">TNI AU Aircrew</h1>
-          <p className="text-xs text-slate-500">Operational Ready Platform</p>
-        </div>
-      </div>
-    </div>
-    <nav className="space-y-4">
-      {navGroups.map((group) => (
-        <div key={group.label} className="space-y-1">
-          <p className="px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{group.label}</p>
-          {group.items.map((item) => (
+const requestedNavGroups = Object.entries(
+  requestedFeatureModules.reduce<Record<string, NavItem[]>>((acc, module) => {
+    const groupItems = acc[module.group] ?? [];
+    groupItems.push({
+      to: module.path,
+      label: module.navLabel ?? module.title,
+      icon: module.icon
+    });
+    acc[module.group] = groupItems;
+    return acc;
+  }, {})
+).map(([label, items]) => ({ label, items }));
+
+const renderGroups = (groups: NavGroup[], query: string, onNavigate?: () => void) =>
+  groups.map((group) => {
+    const filteredItems = group.items.filter((item) => item.label.toLowerCase().includes(query));
+    if (filteredItems.length === 0) return null;
+    return (
+      <details key={group.label} className="group rounded-lg border border-slate-200/80 p-1 dark:border-slate-700/80" open>
+        <summary className="cursor-pointer list-none rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 transition group-open:text-sky-700 dark:group-open:text-sky-400">
+          <div className="flex items-center justify-between">
+            <span>{group.label}</span>
+            <span className="text-[10px]">{filteredItems.length}</span>
+          </div>
+        </summary>
+        <div className="mt-1 space-y-1">
+          {filteredItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -120,7 +120,40 @@ export const Sidebar = ({ mobile = false, onNavigate }: SidebarProps) => (
             </NavLink>
           ))}
         </div>
-      ))}
-    </nav>
-  </aside>
-);
+      </details>
+    );
+  });
+
+export const Sidebar = ({ mobile = false, onNavigate }: SidebarProps) => {
+  const [navSearch, setNavSearch] = useLocalStorageState('sidebar-nav-search', '');
+  const query = navSearch.trim().toLowerCase();
+
+  return (
+    <aside
+      className={`h-full overflow-y-auto border-r border-slate-200/80 bg-white/95 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 ${mobile ? 'w-80 max-w-[85vw]' : 'w-72'}`}
+    >
+      <div className="mb-4 rounded-xl border border-sky-100 bg-gradient-to-r from-sky-50 to-cyan-50 p-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900">
+        <div className="flex items-center gap-3">
+          <img src="/logo.svg" alt="TNI AU Aircrew Logo" className="h-10 w-10 rounded-lg" />
+          <div>
+            <h1 className="text-lg font-bold">TNI AU Aircrew</h1>
+            <p className="text-xs text-slate-500">Operational Ready Platform</p>
+          </div>
+        </div>
+      </div>
+
+      <input className="input mb-3" placeholder="Cari menu sidebar..." value={navSearch} onChange={(event) => setNavSearch(event.target.value)} />
+
+      <nav className="space-y-4">
+        <div className="space-y-2">
+          <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Core Platform</p>
+          {renderGroups(coreNavGroups, query, onNavigate)}
+        </div>
+        <div className="space-y-2">
+          <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Modul Penyempurnaan</p>
+          {renderGroups(requestedNavGroups, query, onNavigate)}
+        </div>
+      </nav>
+    </aside>
+  );
+};
