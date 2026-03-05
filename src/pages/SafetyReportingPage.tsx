@@ -4,9 +4,15 @@ import { useApp } from '../contexts/AppContext';
 
 export const SafetyReportingPage = () => {
   const { state, dispatch } = useApp();
+  const search = state.globalSearch.trim().toLowerCase();
   const [title, setTitle] = useState('');
   const [type, setType] = useState<'Hazard' | 'Near-Miss' | 'Incident'>('Hazard');
   const [anonymous, setAnonymous] = useState(false);
+
+  const visibleIncidents = state.incidents.filter((item) => {
+    if (!search) return true;
+    return `${item.title} ${item.type} ${item.status}`.toLowerCase().includes(search);
+  });
 
   return (
     <section className="space-y-4">
@@ -49,7 +55,7 @@ export const SafetyReportingPage = () => {
       </div>
 
       <div className="space-y-2">
-        {state.incidents.map((item) => (
+        {visibleIncidents.map((item) => (
           <div key={item.id} className="card flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="font-semibold">{item.title}</p>
@@ -62,6 +68,7 @@ export const SafetyReportingPage = () => {
             </div>
           </div>
         ))}
+        {visibleIncidents.length === 0 && <div className="card text-sm text-slate-500">Tidak ada safety report yang sesuai global search.</div>}
       </div>
     </section>
   );

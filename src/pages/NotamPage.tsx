@@ -4,13 +4,19 @@ import { useApp } from '../contexts/AppContext';
 
 export const NotamPage = () => {
   const { state, dispatch } = useApp();
+  const search = state.globalSearch.trim().toLowerCase();
   const [areaFilter, setAreaFilter] = useState('All');
   const [baseFilter, setBaseFilter] = useState('All');
 
   const areas = useMemo(() => ['All', ...new Set(state.notams.map((item) => item.area))], [state.notams]);
   const bases = useMemo(() => ['All', ...new Set(state.notams.map((item) => item.base))], [state.notams]);
 
-  const filtered = state.notams.filter((item) => (areaFilter === 'All' || item.area === areaFilter) && (baseFilter === 'All' || item.base === baseFilter));
+  const filtered = state.notams.filter((item) => {
+    const matchFilter = (areaFilter === 'All' || item.area === areaFilter) && (baseFilter === 'All' || item.base === baseFilter);
+    if (!matchFilter) return false;
+    if (!search) return true;
+    return `${item.id} ${item.area} ${item.base} ${item.content}`.toLowerCase().includes(search);
+  });
 
   return (
     <section className="space-y-4">
@@ -56,6 +62,7 @@ export const NotamPage = () => {
             )}
           </div>
         ))}
+        {filtered.length === 0 && <div className="card text-sm text-slate-500">Tidak ada NOTAM yang cocok dengan filter aktif.</div>}
       </div>
     </section>
   );

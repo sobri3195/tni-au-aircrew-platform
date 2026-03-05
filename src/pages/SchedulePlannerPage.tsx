@@ -6,6 +6,7 @@ const isOverlap = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => aStart
 
 export const SchedulePlannerPage = () => {
   const { state, dispatch } = useApp();
+  const search = state.globalSearch.trim().toLowerCase();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<'Sortie' | 'Training' | 'Briefing'>('Sortie');
   const [base, setBase] = useState('Lanud Iswahjudi');
@@ -20,13 +21,15 @@ export const SchedulePlannerPage = () => {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
 
-    return state.schedule
+    const items = state.schedule
       .filter((item) => {
         const itemStart = new Date(item.start);
         return itemStart >= weekStart && itemStart < weekEnd;
       })
       .sort((a, b) => +new Date(a.start) - +new Date(b.start));
-  }, [state.schedule]);
+    if (!search) return items;
+    return items.filter((item) => `${item.title} ${item.category} ${item.base}`.toLowerCase().includes(search));
+  }, [search, state.schedule]);
 
   const conflictIds = useMemo(() => {
     const flagged = new Set<string>();
@@ -99,6 +102,7 @@ export const SchedulePlannerPage = () => {
             </div>
           </div>
         ))}
+        {weeklyItems.length === 0 && <div className="card text-sm text-slate-500">Tidak ada jadwal minggu ini yang sesuai pencarian.</div>}
       </div>
     </section>
   );
