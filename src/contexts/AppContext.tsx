@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer, type Dispatc
 import { initialState } from '../data/mockData';
 import type { AppState, AuditLogEntry, Incident, LogbookEntry, OrmAssessment, Role, ScheduleItem, Theme, TrainingItem } from '../types';
 import { daysUntil } from '../utils/date';
+import { readJsonStorage, writeJsonStorage } from '../utils/storage';
 
 type Action =
   | { type: 'LOGIN'; payload: Role }
@@ -19,13 +20,7 @@ type Action =
 const STORAGE_KEY = 'tni-au-aircrew-state';
 
 const readState = (): AppState => {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return initialState;
-  try {
-    return JSON.parse(raw) as AppState;
-  } catch {
-    return initialState;
-  }
+  return readJsonStorage(STORAGE_KEY, initialState);
 };
 
 const pushAudit = (state: AppState, payload: Omit<AuditLogEntry, 'id' | 'timestamp'>): AppState => ({
@@ -81,7 +76,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(reducer, initialState, readState);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    writeJsonStorage(STORAGE_KEY, state);
     document.documentElement.classList.toggle('dark', state.theme === 'dark');
   }, [state]);
 

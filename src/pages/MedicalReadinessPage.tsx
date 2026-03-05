@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { Badge } from '../components/ui/Badge';
 import { Toast } from '../components/ui/Toast';
 import { useApp } from '../contexts/AppContext';
 import { daysUntil } from '../utils/date';
+import { readJsonStorage } from '../utils/storage';
 
 type FitStatus = 'Fit' | 'Review' | 'Unfit';
 
@@ -112,20 +114,15 @@ const emptyStorage: MedicalStorage = {
   exposure: []
 };
 
-const readStorage = (): MedicalStorage => {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return emptyStorage;
-  try {
-    return { ...emptyStorage, ...(JSON.parse(raw) as MedicalStorage) };
-  } catch {
-    return emptyStorage;
-  }
-};
+const readStorage = (): MedicalStorage => ({
+  ...emptyStorage,
+  ...readJsonStorage<MedicalStorage>(STORAGE_KEY, emptyStorage)
+});
 
 export const MedicalReadinessPage = () => {
   const { state } = useApp();
-  const [selectedPilotId, setSelectedPilotId] = useState(state.profiles[0]?.id ?? '');
-  const [storage, setStorage] = useState<MedicalStorage>(readStorage);
+  const [selectedPilotId, setSelectedPilotId] = useLocalStorageState('medical-selected-pilot', state.profiles[0]?.id ?? '');
+  const [storage, setStorage] = useLocalStorageState<MedicalStorage>(STORAGE_KEY, readStorage());
   const [toast, setToast] = useState('');
 
   const [profileForm, setProfileForm] = useState<Omit<MedicalProfileRecord, 'id'>>({
@@ -203,9 +200,12 @@ export const MedicalReadinessPage = () => {
     exposure: null
   });
 
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(storage));
-  }, [storage]);
+    if (!state.profiles.some((profile) => profile.id === selectedPilotId)) {
+      setSelectedPilotId(state.profiles[0]?.id ?? '');
+    }
+  }, [selectedPilotId, setSelectedPilotId, state.profiles]);
 
   useEffect(() => {
     setProfileForm((prev) => ({ ...prev, pilotId: selectedPilotId }));
