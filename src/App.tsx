@@ -23,7 +23,17 @@ const routes = [
   { path: '/fatigue', title: 'Fatigue & Self-Assessment', description: 'Questionnaire fit/caution/no-go berbasis skor sederhana.' },
   { path: '/inventory', title: 'Equipment & GSE Inventory', description: 'Helmet/NVG/vest/oxygen/G-suit tracking serviceable history.' },
   { path: '/maintenance', title: 'Maintenance Snapshot', description: 'Daftar aircraft FMC/PMC/NMC beserta jadwal inspeksi mock.' },
-  { path: '/messaging', title: 'Secure Messaging', description: 'Inbox/outbox internal localStorage dengan tag urgent/info.' }
+  { path: '/messaging', title: 'Secure Messaging', description: 'Inbox/outbox internal localStorage dengan tag urgent/info.' },
+  { path: '/mission-readiness', title: 'Mission Readiness Matrix', description: 'Matriks kesiapan penerbang per tipe misi dengan status Green/Amber/Red.' },
+  { path: '/combat-proficiency', title: 'Combat Proficiency Analyzer', description: 'Pantau proficiency air-to-air, air-to-ground, dan tactical decision score.' },
+  { path: '/simulator-scenarios', title: 'Simulator Scenario Manager', description: 'Rencanakan skenario simulator high-threat untuk menjaga tactical sharpness.' },
+  { path: '/emergency-drills', title: 'Emergency Drill Orchestrator', description: 'Kelola latihan emergency berkala dan evaluasi performa time-critical.' },
+  { path: '/flight-debrief', title: 'Flight Debrief Intelligence', description: 'Debrief sortie dengan temuan utama, lesson learned, dan corrective action.' },
+  { path: '/aeromedical-risk', title: 'Aeromedical Risk Monitor', description: 'Monitoring risiko aeromedis: hidrasi, G-tolerance, dan paparan fatigue kronis.' },
+  { path: '/mission-knowledge', title: 'Mission Knowledge Hub', description: 'Pusat pembelajaran taktik, replay kejadian, serta referensi mission package.' },
+  { path: '/leadership-board', title: 'Wingman Leadership Board', description: 'Evaluasi kepemimpinan penerbang senior untuk mentoring dan safety culture.' },
+  { path: '/readiness-forecast', title: 'Readiness Forecast', description: 'Prediksi kesiapan 14-30 hari ke depan untuk perencanaan komando skuadron.' },
+  { path: '/career-path', title: 'Pilot Career Path Planner', description: 'Perencanaan jenjang kualifikasi penerbang dari basic mission ke mission commander.' }
 ];
 
 export default function App() {

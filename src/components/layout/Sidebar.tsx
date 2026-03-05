@@ -40,6 +40,21 @@ const navGroups = [
     ]
   },
   {
+    label: 'Penyempurnaan Penerbang',
+    items: [
+      ['/mission-readiness', 'Mission Readiness Matrix'],
+      ['/combat-proficiency', 'Combat Proficiency Analyzer'],
+      ['/simulator-scenarios', 'Simulator Scenario Manager'],
+      ['/emergency-drills', 'Emergency Drill Orchestrator'],
+      ['/flight-debrief', 'Flight Debrief Intelligence'],
+      ['/aeromedical-risk', 'Aeromedical Risk Monitor'],
+      ['/mission-knowledge', 'Mission Knowledge Hub'],
+      ['/leadership-board', 'Wingman Leadership Board'],
+      ['/readiness-forecast', 'Readiness Forecast'],
+      ['/career-path', 'Pilot Career Path Planner']
+    ]
+  },
+  {
     label: 'Analitik',
     items: [
       ['/reports', 'Reports'],
