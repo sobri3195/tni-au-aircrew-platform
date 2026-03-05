@@ -48,7 +48,7 @@ export const AppShell = () => {
 
       <main className="flex-1 min-w-0">
         <Topbar onMenuToggle={() => setMobileMenuOpen(true)} />
-        <div className="p-3 md:p-4">
+        <div className="mx-auto w-full max-w-[1400px] p-3 md:p-4 lg:p-5">
           <Outlet />
         </div>
       </main>
