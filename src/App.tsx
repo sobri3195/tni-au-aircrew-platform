@@ -9,6 +9,7 @@ import { MedicalReadinessPage } from './pages/MedicalReadinessPage';
 import { NotamPage } from './pages/NotamPage';
 import { OrmPage } from './pages/OrmPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { RikkesPage } from './pages/RikkesPage';
 import { SafetyReportingPage } from './pages/SafetyReportingPage';
 import { SchedulePlannerPage } from './pages/SchedulePlannerPage';
 import { TrainingPage } from './pages/TrainingPage';
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/notam" element={<NotamPage />} />
           <Route path="/safety" element={<SafetyReportingPage />} />
           <Route path="/medical" element={<MedicalReadinessPage />} />
+          <Route path="/rikkes" element={<RikkesPage />} />
           <Route path="/admin" element={<AdminPanelPage />} />
           {routes.map((route) => (
             <Route key={route.path} path={route.path} element={<GenericFeaturePage title={route.title} description={route.description} />} />

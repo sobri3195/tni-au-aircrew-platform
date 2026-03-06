@@ -36,6 +36,7 @@ const coreNavGroups: NavGroup[] = [
       { to: '/notam', label: 'NOTAM', icon: '📡' },
       { to: '/safety', label: 'Safety Reporting', icon: '🛡️' },
       { to: '/medical', label: 'Medical Readiness', icon: '🩺' },
+      { to: '/rikkes', label: 'Rikkes TNI AU', icon: '🏥' },
       { to: '/weather', label: 'Weather Brief', icon: '🌦️' },
       { to: '/duty-rest', label: 'Crew Duty & Rest', icon: '⏱️' },
       { to: '/fatigue', label: 'Fatigue Assessment', icon: '😴' }
