@@ -1,18 +1,26 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../contexts/AppContext';
+import { useMasterData } from '../hooks/useMasterData';
 
 const isOverlap = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => aStart < bEnd && bStart < aEnd;
 
 export const SchedulePlannerPage = () => {
   const { state, dispatch } = useApp();
+  const { masterData } = useMasterData();
   const search = state.globalSearch.trim().toLowerCase();
   const [title, setTitle] = useLocalStorageState('draft-schedule-title', '');
   const [category, setCategory] = useLocalStorageState<'Sortie' | 'Training' | 'Briefing'>('draft-schedule-category', 'Sortie');
   const [base, setBase] = useLocalStorageState('draft-schedule-base', 'Lanud Iswahjudi');
   const [start, setStart] = useLocalStorageState('draft-schedule-start', '');
   const [end, setEnd] = useLocalStorageState('draft-schedule-end', '');
+
+  useEffect(() => {
+    if (!masterData.bases.includes(base)) {
+      setBase(masterData.bases[0] ?? '');
+    }
+  }, [base, masterData.bases, setBase]);
 
   const weeklyItems = useMemo(() => {
     const now = new Date();
@@ -56,8 +64,9 @@ export const SchedulePlannerPage = () => {
     const endDate = new Date(end);
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 'Format waktu tidak valid.';
     if (endDate <= startDate) return 'Waktu selesai harus lebih besar dari waktu mulai.';
+    if (!base.trim()) return 'Base wajib dipilih.';
     return '';
-  }, [end, start, title]);
+  }, [base, end, start, title]);
 
   return (
     <section className="space-y-4">
@@ -75,7 +84,13 @@ export const SchedulePlannerPage = () => {
         </select>
         <input className="input" type="datetime-local" value={start} onChange={(event) => setStart(event.target.value)} />
         <input className="input" type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} />
-        <input className="input" placeholder="Base" value={base} onChange={(event) => setBase(event.target.value)} />
+        <select className="input" value={base} onChange={(event) => setBase(event.target.value)}>
+          {masterData.bases.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
         <button
           className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
           disabled={Boolean(validationError)}

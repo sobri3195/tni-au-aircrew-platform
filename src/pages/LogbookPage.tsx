@@ -1,13 +1,32 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { useApp } from '../contexts/AppContext';
 import { Table } from '../components/ui/Table';
 import { formatDate } from '../utils/date';
+import { useMasterData } from '../hooks/useMasterData';
 
 export const LogbookPage = () => {
   const { state, dispatch } = useApp();
-  const [form, setForm] = useLocalStorageState('draft-logbook-form', { aircraft: 'F-16C TS-1601', sortieType: 'Training', duration: '1.5', dayNight: 'Day', ifr: false, nvg: false, remarks: '' });
+  const { masterData } = useMasterData();
+  const [form, setForm] = useLocalStorageState('draft-logbook-form', {
+    aircraft: 'F-16C TS-1601',
+    sortieType: 'Training',
+    duration: '1.5',
+    dayNight: 'Day',
+    ifr: false,
+    nvg: false,
+    remarks: ''
+  });
   const search = state.globalSearch.trim().toLowerCase();
+
+  useEffect(() => {
+    if (!masterData.aircraft.includes(form.aircraft)) {
+      setForm((previous) => ({ ...previous, aircraft: masterData.aircraft[0] ?? '' }));
+    }
+    if (!masterData.sorties.includes(form.sortieType)) {
+      setForm((previous) => ({ ...previous, sortieType: masterData.sorties[0] ?? '' }));
+    }
+  }, [form.aircraft, form.sortieType, masterData.aircraft, masterData.sorties, setForm]);
 
   const validationError = useMemo(() => {
     const duration = Number(form.duration);
@@ -66,8 +85,20 @@ export const LogbookPage = () => {
         </button>
       </div>
       <div className="card grid gap-2 md:grid-cols-3">
-        <input className="input" placeholder="Aircraft" value={form.aircraft} onChange={(e) => setForm((p) => ({ ...p, aircraft: e.target.value }))} />
-        <input className="input" placeholder="Sortie Type" value={form.sortieType} onChange={(e) => setForm((p) => ({ ...p, sortieType: e.target.value }))} />
+        <select className="input" value={form.aircraft} onChange={(e) => setForm((p) => ({ ...p, aircraft: e.target.value }))}>
+          {masterData.aircraft.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+        <select className="input" value={form.sortieType} onChange={(e) => setForm((p) => ({ ...p, sortieType: e.target.value }))}>
+          {masterData.sorties.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
         <input className="input" placeholder="Duration" value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} />
         <select className="input" value={form.dayNight} onChange={(e) => setForm((p) => ({ ...p, dayNight: e.target.value as 'Day' | 'Night' }))}>
           <option value="Day">Day</option>
