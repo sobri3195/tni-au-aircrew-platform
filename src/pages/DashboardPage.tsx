@@ -4,6 +4,8 @@ import { useApp } from '../contexts/AppContext';
 import { daysUntil } from '../utils/date';
 import { calculateReadinessAlerts, calculateReadinessComponents } from '../utils/readiness';
 import { Badge } from '../components/ui/Badge';
+import { useLocalStorageState } from '../hooks/useLocalStorageState';
+import { initialRikkesRecords, calculateRikkesSummary } from '../data/rikkesData';
 
 const Card = ({ label, value, hint }: { label: string; value: string | number; hint?: string }) => (
   <div className="card border-slate-200/80 bg-white/90 backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
@@ -22,6 +24,8 @@ const statusTone = (score: number) => {
 export const DashboardPage = () => {
   const navigate = useNavigate();
   const { state, readinessScore } = useApp();
+  const [rikkesRecords] = useLocalStorageState('aircrew-rikkes-data-v1', initialRikkesRecords);
+  const rikkesSummary = useMemo(() => calculateRikkesSummary(rikkesRecords), [rikkesRecords]);
 
   const kpi = useMemo(() => {
     const hours30 = state.logbook
@@ -198,6 +202,58 @@ export const DashboardPage = () => {
             <li>Prediksi overload sortie minggu ini: {state.schedule.filter((item) => item.category === 'Sortie').length > 9 ? 'High' : 'Normal'}</li>
           </ul>
         </div>
+        <div className="card">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-semibold">Status Rikkes TNI AU</h3>
+            <button onClick={() => navigate('/rikkes')} className="text-sm text-sky-600 hover:text-sky-700">Lihat Detail →</button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{rikkesSummary.fitToFly}</p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">Fit to Fly</p>
+            </div>
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-3 text-center">
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{rikkesSummary.fitWithRestriction}</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300">With Restriction</p>
+            </div>
+            <div className="rounded-lg bg-rose-50 dark:bg-rose-900/20 p-3 text-center">
+              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{rikkesSummary.unfit}</p>
+              <p className="text-xs text-rose-700 dark:text-rose-300">Unfit</p>
+            </div>
+            <div className="rounded-lg bg-sky-50 dark:bg-sky-900/20 p-3 text-center">
+              <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">{rikkesSummary.expiringSoon}</p>
+              <p className="text-xs text-sky-700 dark:text-sky-300">Expiring Soon</p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-xs text-slate-500 mb-1">Distribusi Kategori Kesehatan</p>
+            <div className="flex h-2 rounded-full overflow-hidden">
+              {(['A', 'B', 'C', 'D', 'E'] as const).map((kategori) => {
+                const count = rikkesSummary[`kategori${kategori}` as keyof typeof rikkesSummary] as number;
+                const total = rikkesSummary.totalPemeriksaan || 1;
+                const width = (count / total) * 100;
+                const colors = {
+                  A: 'bg-emerald-500',
+                  B: 'bg-sky-500',
+                  C: 'bg-amber-500',
+                  D: 'bg-orange-500',
+                  E: 'bg-rose-500'
+                };
+                return width > 0 ? (
+                  <div key={kategori} className={colors[kategori]} style={{ width: `${width}%` }} title={`Kategori ${kategori}: ${count}`} />
+                ) : null;
+              })}
+            </div>
+            <div className="flex justify-between text-xs text-slate-400 mt-1">
+              <span>Kat A</span>
+              <span>Kat B</span>
+              <span>Kat C</span>
+              <span>Kat D</span>
+              <span>Kat E</span>
+            </div>
+          </div>
+        </div>
+
         <div className="card">
           <h3 className="mb-2 font-semibold">Audit Log Terbaru</h3>
           <div className="space-y-1">
