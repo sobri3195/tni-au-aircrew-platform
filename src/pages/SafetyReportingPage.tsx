@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../contexts/AppContext';
@@ -8,6 +9,13 @@ export const SafetyReportingPage = () => {
   const [title, setTitle] = useLocalStorageState('draft-safety-title', '');
   const [type, setType] = useLocalStorageState<'Hazard' | 'Near-Miss' | 'Incident'>('draft-safety-type', 'Hazard');
   const [anonymous, setAnonymous] = useLocalStorageState('draft-safety-anonymous', false);
+
+  const trimmedTitle = title.trim();
+  const validationError = useMemo(() => {
+    if (!trimmedTitle) return 'Judul laporan wajib diisi.';
+    if (trimmedTitle.length < 6) return 'Judul laporan minimal 6 karakter.';
+    return '';
+  }, [trimmedTitle]);
 
   const visibleIncidents = state.incidents.filter((item) => {
     if (!search) return true;
@@ -33,14 +41,15 @@ export const SafetyReportingPage = () => {
           Anonymous
         </label>
         <button
-          className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white"
+          className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={Boolean(validationError)}
           onClick={() => {
-            if (!title) return;
+            if (validationError) return;
             dispatch({
               type: 'ADD_INCIDENT',
               payload: {
                 id: `I${state.incidents.length + 1}`,
-                title,
+                title: trimmedTitle,
                 type,
                 date: new Date().toISOString(),
                 status: 'New',
@@ -48,11 +57,13 @@ export const SafetyReportingPage = () => {
               }
             });
             setTitle('');
+            setAnonymous(false);
           }}
         >
           Submit Report
         </button>
       </div>
+      {validationError && <p className="text-sm text-rose-600">{validationError}</p>}
 
       <div className="space-y-2">
         {visibleIncidents.map((item) => (

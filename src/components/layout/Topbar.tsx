@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Role } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 import { daysUntil } from '../../utils/date';
@@ -11,11 +11,17 @@ const roles: Role[] = ['Pilot', 'Flight Safety Officer', 'Ops Officer', 'Medical
 
 export const Topbar = ({ onMenuToggle }: TopbarProps) => {
   const { state, dispatch } = useApp();
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const notifCount =
     state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length +
     state.orm.filter((o) => o.riskLevel === 'High').length +
     state.incidents.filter((i) => i.status === 'New').length +
     2;
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setCurrentTime(new Date()), 30_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const localTime = useMemo(
     () =>
@@ -25,8 +31,8 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
         month: 'short',
         hour: '2-digit',
         minute: '2-digit'
-      }).format(new Date()),
-    []
+      }).format(currentTime),
+    [currentTime]
   );
 
   return (
@@ -38,6 +44,7 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
 
         <div className="order-3 w-full md:order-none md:w-auto md:flex-1">
           <input
+            id="global-search-input"
             className="input md:max-w-md"
             value={state.globalSearch}
             onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}

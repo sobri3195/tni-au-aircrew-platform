@@ -49,6 +49,16 @@ export const SchedulePlannerPage = () => {
     return flagged;
   }, [weeklyItems]);
 
+  const validationError = useMemo(() => {
+    if (!title.trim()) return 'Judul kegiatan wajib diisi.';
+    if (!start || !end) return 'Waktu mulai dan selesai wajib diisi.';
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 'Format waktu tidak valid.';
+    if (endDate <= startDate) return 'Waktu selesai harus lebih besar dari waktu mulai.';
+    return '';
+  }, [end, start, title]);
+
   return (
     <section className="space-y-4">
       <div>
@@ -67,9 +77,10 @@ export const SchedulePlannerPage = () => {
         <input className="input" type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} />
         <input className="input" placeholder="Base" value={base} onChange={(event) => setBase(event.target.value)} />
         <button
-          className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white"
+          className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={Boolean(validationError)}
           onClick={() => {
-            if (!title || !start || !end) return;
+            if (validationError) return;
             dispatch({
               type: 'ADD_SCHEDULE',
               payload: {
@@ -82,11 +93,14 @@ export const SchedulePlannerPage = () => {
               }
             });
             setTitle('');
+            setStart('');
+            setEnd('');
           }}
         >
           Tambah Kegiatan
         </button>
       </div>
+      {validationError && <p className="text-sm text-rose-600">{validationError}</p>}
 
       <div className="space-y-2">
         {weeklyItems.map((item) => (
