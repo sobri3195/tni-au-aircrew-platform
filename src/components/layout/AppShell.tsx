@@ -15,7 +15,7 @@ export const AppShell = () => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        const input = document.querySelector('input[placeholder^="Global Search"]') as HTMLInputElement | null;
+        const input = document.getElementById('global-search-input') as HTMLInputElement | null;
         input?.focus();
       }
       if (event.altKey && event.key === '1') navigate('/');
