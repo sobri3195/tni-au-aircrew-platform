@@ -67,6 +67,9 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
         </button>
 
         <div className="ml-auto flex items-center gap-2">
+          <div className="hidden rounded-lg bg-cyan-100 px-2 py-1 text-xs font-semibold text-cyan-700 md:block dark:bg-cyan-900/50 dark:text-cyan-200">
+            Hardware Gateway Connected • Semua Modul
+          </div>
           <div className="hidden rounded-lg bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 md:block dark:bg-emerald-900/50 dark:text-emerald-200">Readiness Online</div>
           <div className="rounded-lg bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-900/50 dark:text-rose-200">Alerts: {notifCount}</div>
         </div>
