@@ -6,6 +6,7 @@ import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { moduleBlueprints } from '../data/moduleBlueprints';
 import { getModuleCrudSchema } from '../data/moduleCrudSchemas';
 import { requestedFeatureModules } from '../data/featureModules';
+import { useRoleAccess } from '../hooks/useRoleAccess';
 
 type ChecklistItem = {
   id: string;
@@ -92,6 +93,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const crudStorageKey = useMemo(() => getCrudStorageKey(location.pathname), [location.pathname]);
   const moduleBlueprint = moduleBlueprints[location.pathname];
   const schema = useMemo(() => getModuleCrudSchema(location.pathname), [location.pathname]);
+  const { canWriteCurrentRoute } = useRoleAccess();
 
   const [tasks, setTasks] = useLocalStorageState<ChecklistItem[]>(storageKey, defaultTask(location.pathname));
   const [records, setRecords] = useLocalStorageState<ModuleRecord[]>(crudStorageKey, []);
@@ -239,6 +241,12 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         </div>
       </div>
 
+      {!canWriteCurrentRoute && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100">
+          Role Anda hanya memiliki akses baca untuk modul ini.
+        </div>
+      )}
+
       <div className="grid gap-3 lg:grid-cols-4">
         <div className="card">
           <p className="text-xs uppercase tracking-wide text-slate-500">{schema.entityName} Total</p>
@@ -290,7 +298,8 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
                     <td className="px-3 py-2">
                       <div className="flex gap-2 text-xs">
                         <button
-                          className="rounded bg-sky-100 px-2 py-1 text-sky-700"
+                          className="rounded bg-sky-100 px-2 py-1 text-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={!canWriteCurrentRoute}
                           onClick={() => {
                             setEditId(record.id);
                             setFormValues(record.values);
@@ -299,7 +308,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
                         >
                           Edit
                         </button>
-                        <button className="rounded bg-rose-100 px-2 py-1 text-rose-700" onClick={() => saveRecords(records.filter((item) => item.id !== record.id))}>Delete</button>
+                        <button className="rounded bg-rose-100 px-2 py-1 text-rose-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canWriteCurrentRoute} onClick={() => canWriteCurrentRoute && saveRecords(records.filter((item) => item.id !== record.id))}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -343,7 +352,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
               />
             );
           })}
-          <button className="w-full rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800" onClick={submitRecord}>{editId ? 'Update Record' : 'Create Record'}</button>
+          <button className="w-full rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canWriteCurrentRoute} onClick={() => canWriteCurrentRoute && submitRecord()}>{editId ? 'Update Record' : 'Create Record'}</button>
           {editId && <button className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" onClick={resetForm}>Cancel Edit</button>}
         </div>
       </div>
@@ -413,11 +422,12 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
                     type="checkbox"
                     checked={task.done}
                     onChange={() => {
+                      if (!canWriteCurrentRoute) return;
                       const next = tasks.map((item) => (item.id === task.id ? { ...item, done: !item.done } : item));
                       saveTasks(next);
                     }}
                   />
-                  <button className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" onClick={() => saveTasks(tasks.filter((item) => item.id !== task.id))}>
+                  <button className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canWriteCurrentRoute} onClick={() => canWriteCurrentRoute && saveTasks(tasks.filter((item) => item.id !== task.id))}>
                     Hapus
                   </button>
                 </div>
@@ -428,16 +438,17 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
 
         <div className="card space-y-3">
           <h3 className="font-semibold">Kontrol Workflow</h3>
-          <input className="input" placeholder="Tambah task" value={newTask} onChange={(event) => setNewTask(event.target.value)} />
-          <select className="input" value={taskOwner} onChange={(event) => setTaskOwner(event.target.value)}>
+          <input className="input" placeholder="Tambah task" value={newTask} disabled={!canWriteCurrentRoute} onChange={(event) => setNewTask(event.target.value)} />
+          <select className="input" value={taskOwner} disabled={!canWriteCurrentRoute} onChange={(event) => setTaskOwner(event.target.value)}>
             {owners.map((item) => (
               <option key={item} value={item}>{item}</option>
             ))}
           </select>
           <button
-            className="w-full rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+            className="w-full rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canWriteCurrentRoute}
             onClick={() => {
-              if (!newTask.trim()) return;
+              if (!canWriteCurrentRoute || !newTask.trim()) return;
               saveTasks([{ id: `${Date.now()}`, text: newTask.trim(), owner: taskOwner, done: false }, ...tasks]);
               setNewTask('');
             }}
@@ -455,8 +466,10 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         </div>
         <p className="text-sm text-slate-600 dark:text-slate-300">{aiInsight.narrative}</p>
         <button
-          className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={!canWriteCurrentRoute}
           onClick={() => {
+            if (!canWriteCurrentRoute) return;
             const generated = aiInsight.recommendations.map((item, index) => ({ id: `ai-${Date.now()}-${index}`, text: `[AI] ${item.text}`, owner: item.owner, done: false }));
             saveTasks([...generated, ...tasks]);
           }}

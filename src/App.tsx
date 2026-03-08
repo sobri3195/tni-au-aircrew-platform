@@ -1,4 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { useApp } from './contexts/AppContext';
+import { hasRouteAccess } from './utils/rbac';
+import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { AdminPanelPage } from './pages/AdminPanelPage';
 import { AppShell } from './components/layout/AppShell';
 import { DashboardPage } from './pages/DashboardPage';
@@ -40,6 +43,13 @@ const coreFeatureRoutes = [
 
 const routes = [...coreFeatureRoutes, ...requestedFeatureModules];
 
+const ProtectedRoute = ({ path, element }: { path: string; element: JSX.Element }) => {
+  const { state } = useApp();
+  if (!hasRouteAccess(state.role, path)) {
+    return <AccessDeniedPage />;
+  }
+  return element;
+};
 
 export default function App() {
   return (
@@ -47,19 +57,23 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<AppShell />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/logbook" element={<LogbookPage />} />
-          <Route path="/orm" element={<OrmPage />} />
-          <Route path="/training" element={<TrainingPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/schedule" element={<SchedulePlannerPage />} />
-          <Route path="/notam" element={<NotamPage />} />
-          <Route path="/safety" element={<SafetyReportingPage />} />
-          <Route path="/medical" element={<MedicalReadinessPage />} />
-          <Route path="/rikkes" element={<RikkesPage />} />
-          <Route path="/admin" element={<AdminPanelPage />} />
+          <Route path="/" element={<ProtectedRoute path="/" element={<DashboardPage />} />} />
+          <Route path="/logbook" element={<ProtectedRoute path="/logbook" element={<LogbookPage />} />} />
+          <Route path="/orm" element={<ProtectedRoute path="/orm" element={<OrmPage />} />} />
+          <Route path="/training" element={<ProtectedRoute path="/training" element={<TrainingPage />} />} />
+          <Route path="/reports" element={<ProtectedRoute path="/reports" element={<ReportsPage />} />} />
+          <Route path="/schedule" element={<ProtectedRoute path="/schedule" element={<SchedulePlannerPage />} />} />
+          <Route path="/notam" element={<ProtectedRoute path="/notam" element={<NotamPage />} />} />
+          <Route path="/safety" element={<ProtectedRoute path="/safety" element={<SafetyReportingPage />} />} />
+          <Route path="/medical" element={<ProtectedRoute path="/medical" element={<MedicalReadinessPage />} />} />
+          <Route path="/rikkes" element={<ProtectedRoute path="/rikkes" element={<RikkesPage />} />} />
+          <Route path="/admin" element={<ProtectedRoute path="/admin" element={<AdminPanelPage />} />} />
           {routes.map((route) => (
-            <Route key={route.path} path={route.path} element={<GenericFeaturePage title={route.title} description={route.description} />} />
+            <Route
+              key={route.path}
+              path={route.path}
+              element={<ProtectedRoute path={route.path} element={<GenericFeaturePage title={route.title} description={route.description} />} />}
+            />
           ))}
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

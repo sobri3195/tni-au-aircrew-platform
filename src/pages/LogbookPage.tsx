@@ -4,10 +4,13 @@ import { useApp } from '../contexts/AppContext';
 import { Table } from '../components/ui/Table';
 import { formatDate } from '../utils/date';
 import { useMasterData } from '../hooks/useMasterData';
+import { useRoleAccess } from '../hooks/useRoleAccess';
 
 export const LogbookPage = () => {
   const { state, dispatch } = useApp();
   const { masterData } = useMasterData();
+  const { canDoAction } = useRoleAccess();
+  const canAddLogbook = canDoAction('ADD_LOGBOOK');
   const [form, setForm] = useLocalStorageState('draft-logbook-form', {
     aircraft: 'F-16C TS-1601',
     sortieType: 'Training',
@@ -61,8 +64,9 @@ export const LogbookPage = () => {
         <div className="card">Jam IFR: {totals.ifr}</div>
         <button
           className="rounded-xl bg-sky-700 px-3 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={Boolean(validationError)}
+          disabled={Boolean(validationError) || !canAddLogbook}
           onClick={() => {
+            if (!canAddLogbook) return;
             const id = `L${state.logbook.length + 1}`;
             dispatch({
               type: 'ADD_LOGBOOK',
@@ -108,6 +112,7 @@ export const LogbookPage = () => {
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.nvg} onChange={(e) => setForm((p) => ({ ...p, nvg: e.target.checked }))} /> NVG</label>
         <textarea className="input md:col-span-3" placeholder="Remarks" value={form.remarks} onChange={(e) => setForm((p) => ({ ...p, remarks: e.target.value }))} />
       </div>
+      {!canAddLogbook && <p className="text-sm text-amber-600">Role saat ini hanya bisa melihat logbook.</p>}
       {validationError && <p className="text-sm text-rose-600">{validationError}</p>}
       <Table headers={['Date', 'Aircraft', 'Type', 'Duration', 'Day/Night', 'IFR', 'NVG', 'Remarks']}>
         {visibleRows.map((item) => (

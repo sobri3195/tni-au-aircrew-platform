@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { requestedFeatureModules } from '../../data/featureModules';
 import { useLocalStorageState } from '../../hooks/useLocalStorageState';
+import { useApp } from '../../contexts/AppContext';
+import { hasRouteAccess } from '../../utils/rbac';
 
 type SidebarProps = {
   mobile?: boolean;
@@ -156,6 +158,21 @@ export const Sidebar = ({ mobile = false, onNavigate }: SidebarProps) => {
     []
   );
   const [groupOpenState, setGroupOpenState] = useState<Record<string, boolean>>(initialOpenGroups);
+  const { state } = useApp();
+
+  const visibleCoreGroups = useMemo(() =>
+    coreNavGroups
+      .map((group) => ({ ...group, items: group.items.filter((item) => hasRouteAccess(state.role, item.to)) }))
+      .filter((group) => group.items.length > 0),
+    [state.role]
+  );
+
+  const visibleRequestedGroups = useMemo(() =>
+    requestedNavGroups
+      .map((group) => ({ ...group, items: group.items.filter((item) => hasRouteAccess(state.role, item.to)) }))
+      .filter((group) => group.items.length > 0),
+    [state.role]
+  );
 
   const onToggleGroup = (groupLabel: string) => {
     setGroupOpenState((currentState) => ({
@@ -183,11 +200,11 @@ export const Sidebar = ({ mobile = false, onNavigate }: SidebarProps) => {
       <nav className="space-y-4">
         <div className="space-y-2">
           <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Core Platform</p>
-          {renderGroups(coreNavGroups, query, groupOpenState, onToggleGroup, onNavigate)}
+          {renderGroups(visibleCoreGroups, query, groupOpenState, onToggleGroup, onNavigate)}
         </div>
         <div className="space-y-2">
           <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Modul Penyempurnaan</p>
-          {renderGroups(requestedNavGroups, query, groupOpenState, onToggleGroup, onNavigate)}
+          {renderGroups(visibleRequestedGroups, query, groupOpenState, onToggleGroup, onNavigate)}
         </div>
       </nav>
     </aside>
