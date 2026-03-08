@@ -9,6 +9,13 @@ npm install
 npm run dev
 ```
 
+## Input Data Tanpa Backend (Frontend-only + Local Storage)
+
+- Semua fitur input (tambah/ubah/hapus) berjalan langsung di browser tanpa API backend.
+- Perubahan data disimpan otomatis ke **Local Storage**.
+- Data akan tetap ada saat refresh selama Local Storage browser tidak dibersihkan.
+- Untuk reset data, hapus Local Storage aplikasi dari browser.
+
 ## Arsitektur Folder
 
 - `src/components` : komponen reusable dan layout (Sidebar/Topbar/Table/Modal/Badge/Toast/Timeline)
