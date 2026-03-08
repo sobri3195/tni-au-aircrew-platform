@@ -1,0 +1,88 @@
+%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj
+4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
+5 0 obj << /Length 2406 >> stream
+BT
+/F1 10 Tf
+50 790 Td
+(TNI AU Aircrew Platform ? One-Page Summary) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(WHAT IT IS) Tj
+0 -13 Td
+(TNI AU Aircrew Platform is a frontend-only single-page application \(SPA\) for aircrew operations, built with React, TypeScript, TailwindCSS, and Vite.) Tj
+0 -13 Td
+(It centralizes operational readiness workflows in the browser without a backend API.) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(WHO IT'S FOR) Tj
+0 -13 Td
+(Primary persona: Indonesian Air Force \(TNI AU\) aircrew stakeholders such as Pilot, Flight Safety Officer, Ops Officer, Medical, and Commander/Admin roles.) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(WHAT IT DOES) Tj
+0 -13 Td
+(? Shows a readiness dashboard and mission-profile-driven readiness score.) Tj
+0 -13 Td
+(? Manages E-Logbook entries and sortie-related operational records.) Tj
+0 -13 Td
+(? Supports ORM risk assessments and safety/incident reporting workflows.) Tj
+0 -13 Td
+(? Tracks training/currency status and schedule planning.) Tj
+0 -13 Td
+(? Handles NOTAM acknowledgment and operational awareness pages.) Tj
+0 -13 Td
+(? Enforces role-based route/action access for multiple operational roles.) Tj
+0 -13 Td
+(? Persists app data locally, including audit logs, and supports client-side CSV/PDF export.) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(HOW IT WORKS \(REPO-EVIDENCE ARCHITECTURE\)) Tj
+0 -13 Td
+(? Client app: React SPA with BrowserRouter route-based pages \(core pages + dynamic feature modules\).) Tj
+0 -13 Td
+(? State layer: AppProvider uses React Context + useReducer as global state manager.) Tj
+0 -13 Td
+(? Data/persistence: initial mock data seeds state, then reads/writes full app state to browser localStorage.) Tj
+0 -13 Td
+(? Access control: RBAC utilities gate route visibility and write actions per role.) Tj
+0 -13 Td
+(? Derived analytics: readiness score is computed from state and exposed through context.) Tj
+0 -13 Td
+(? Delivery/runtime: Vite dev/build pipeline, static frontend deploy, and service-worker registration for basic offline behavior.) Tj
+0 -13 Td
+(? Integrations/back-end: Not found in repo \(no API client/service integration found\).) Tj
+0 -13 Td
+() Tj
+0 -13 Td
+(HOW TO RUN \(MINIMAL\)) Tj
+0 -13 Td
+(1. Install dependencies: `npm install`) Tj
+0 -13 Td
+(2. Start local dev server: `npm run dev`) Tj
+0 -13 Td
+(3. Build production assets \(optional\): `npm run build`) Tj
+0 -13 Td
+(4. Preview build locally \(optional\): `npm run preview`) Tj
+ET
+endstream endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer << /Size 6 /Root 1 0 R >>
+startxref
+2769
+%%EOF
