@@ -1,4 +1,4 @@
-import type { AppState } from '../types';
+import type { AppState, MissionProfile } from '../types';
 import { daysUntil } from './date';
 
 export type ReadinessComponent = {
@@ -17,6 +17,12 @@ export type ReadinessAlert = {
 };
 
 const clamp = (value: number) => Math.max(20, Math.min(100, Math.round(value)));
+
+const profileWeights: Record<MissionProfile, Record<'medical' | 'training' | 'risk' | 'safety' | 'notam', number>> = {
+  Training: { medical: 0.27, training: 0.3, risk: 0.16, safety: 0.14, notam: 0.13 },
+  'Routine Ops': { medical: 0.3, training: 0.25, risk: 0.2, safety: 0.15, notam: 0.1 },
+  'High-Risk Ops': { medical: 0.28, training: 0.24, risk: 0.28, safety: 0.14, notam: 0.06 }
+};
 
 export const calculateReadinessComponents = (state: AppState): ReadinessComponent[] => {
   const profileCount = Math.max(state.profiles.length, 1);
@@ -40,12 +46,14 @@ export const calculateReadinessComponents = (state: AppState): ReadinessComponen
   const unackedNotam = state.notams.filter((item) => !item.acknowledged).length;
   const notamScore = clamp(100 - unackedNotam * 8);
 
+  const weights = profileWeights[state.missionProfile];
+
   return [
-    { label: 'Medical Readiness', score: medicalScore, weight: 0.3, note: `${activeCrew}/${profileCount} aircrew fit for duty` },
-    { label: 'Training Currency', score: trainingScore, weight: 0.25, note: `${expiringTraining} expiring, ${expiredTraining} expired` },
-    { label: 'Operational Risk', score: riskScore, weight: 0.2, note: `${highRiskOrm} high risk mission profile` },
-    { label: 'Safety Posture', score: safetyScore, weight: 0.15, note: `${openIncidents} incident awaiting triage` },
-    { label: 'NOTAM Compliance', score: notamScore, weight: 0.1, note: `${unackedNotam} NOTAM not acknowledged` }
+    { label: 'Medical Readiness', score: medicalScore, weight: weights.medical, note: `${activeCrew}/${profileCount} aircrew fit for duty` },
+    { label: 'Training Currency', score: trainingScore, weight: weights.training, note: `${expiringTraining} expiring, ${expiredTraining} expired` },
+    { label: 'Operational Risk', score: riskScore, weight: weights.risk, note: `${highRiskOrm} high risk mission profile` },
+    { label: 'Safety Posture', score: safetyScore, weight: weights.safety, note: `${openIncidents} incident awaiting triage` },
+    { label: 'NOTAM Compliance', score: notamScore, weight: weights.notam, note: `${unackedNotam} NOTAM not acknowledged` }
   ];
 };
 
@@ -60,6 +68,7 @@ export const calculateReadinessAlerts = (state: AppState): ReadinessAlert[] => {
   const highRiskOrm = state.orm.filter((item) => item.riskLevel === 'High').length;
   const openIncidents = state.incidents.filter((item) => item.status === 'New').length;
   const unackedNotam = state.notams.filter((item) => !item.acknowledged).length;
+  const limitedCrew = state.profiles.filter((pilot) => pilot.status !== 'Active').length;
 
   const alerts: ReadinessAlert[] = [
     {
@@ -68,6 +77,13 @@ export const calculateReadinessAlerts = (state: AppState): ReadinessAlert[] => {
       message: `${expiredTraining} training expired and ${expiringTraining} will expire <30 days`,
       route: '/training',
       value: expiredTraining + expiringTraining
+    },
+    {
+      id: 'alert-medical-crew-status',
+      severity: limitedCrew >= 2 ? 'critical' : 'warning',
+      message: `${limitedCrew} aircrew in limited/grounded status affecting sortie assignment`,
+      route: '/medical',
+      value: limitedCrew
     },
     {
       id: 'alert-orm-high',
