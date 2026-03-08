@@ -20,10 +20,11 @@ export const LoginPage = () => {
             <p className="text-xs text-slate-400">TNI AU Aircrew Digital Operations</p>
           </div>
         </div>
-        <p className="mb-4 text-sm text-slate-400">Pilih role operasional.</p>
+        <p className="mb-2 text-sm text-slate-400">Pilih peran (role) sesuai kebutuhan operasional, disesuaikan dengan fungsi dan modulnya.</p>
         <select className="input mb-4" value={role} onChange={(e) => setRole(e.target.value as Role)}>
           {roles.map((item) => <option key={item}>{item}</option>)}
         </select>
+        <p className="mb-4 text-xs text-slate-500">Contoh: Ops Officer untuk Schedule/NOTAM, Medical untuk modul kesiapan medis, dan Commander/Admin untuk akses lintas modul.</p>
         <button
           className="w-full rounded-lg bg-sky-700 px-4 py-2 font-semibold"
           onClick={() => {
