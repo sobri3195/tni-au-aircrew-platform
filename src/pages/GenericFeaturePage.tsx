@@ -34,6 +34,12 @@ type ModuleSyncSummary = {
   updatedAt: string;
 };
 
+type FlowStage = {
+  name: string;
+  complete: boolean;
+  detail: string;
+};
+
 const workflowPreset: Record<string, string[]> = {
   '/profile': ['Update profil penerbang', 'Validasi status currency', 'Kirim verifikasi ke komandan'],
   '/weather': ['Review METAR/TAF', 'Tandai cuaca kritis', 'Publish briefing cuaca'],
@@ -121,6 +127,8 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const doneTask = tasks.filter((task) => task.done).length;
   const progress = Math.round((doneTask / Math.max(tasks.length, 1)) * 100);
   const filteredTasks = filter === 'all' ? tasks : tasks.filter((task) => (filter === 'done' ? task.done : !task.done));
+  const openTaskCount = tasks.length - doneTask;
+  const openRecordCount = records.filter((record) => !/closed|done|resolved|synced|completed|validated/i.test(record.status)).length;
 
   const statusCounts = useMemo(() => records.reduce<Record<string, number>>((acc, record) => {
     acc[record.status] = (acc[record.status] ?? 0) + 1;
@@ -150,16 +158,15 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   }, [progress, tasks]);
 
   useEffect(() => {
-    const openRecords = records.filter((record) => !/closed|done|resolved|synced|completed|validated/i.test(record.status)).length;
     const moduleMeta = moduleMetaMap[location.pathname];
     const nextSummary: ModuleSyncSummary = {
       path: location.pathname,
       title: moduleMeta?.title ?? title,
       group: moduleMeta?.group ?? 'Core Module',
       progress,
-      openTasks: tasks.filter((task) => !task.done).length,
+      openTasks: openTaskCount,
       totalRecords: records.length,
-      openRecords,
+      openRecords: openRecordCount,
       updatedAt: new Date().toISOString()
     };
 
@@ -180,7 +187,20 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
       ...moduleSyncMap,
       [location.pathname]: nextSummary
     });
-  }, [location.pathname, moduleSyncMap, progress, records, setModuleSyncMap, tasks, title]);
+  }, [location.pathname, moduleSyncMap, openRecordCount, openTaskCount, progress, records.length, setModuleSyncMap, title]);
+
+  const flowStages = useMemo<FlowStage[]>(() => {
+    const hasRecords = records.length > 0;
+    const hasOpenRecords = openRecordCount > 0;
+    const hasOpenTasks = openTaskCount > 0;
+
+    return [
+      { name: 'Planning', complete: hasRecords, detail: hasRecords ? `${records.length} record sudah diinisiasi.` : 'Belum ada record, mulai dari input data inti.' },
+      { name: 'Validation', complete: !hasOpenRecords && hasRecords, detail: hasOpenRecords ? `${openRecordCount} record masih open.` : 'Semua record sudah tervalidasi.' },
+      { name: 'Workflow Closure', complete: !hasOpenTasks && tasks.length > 0, detail: hasOpenTasks ? `${openTaskCount} task belum selesai.` : 'Semua task workflow sudah ditutup.' },
+      { name: 'Command Gate', complete: progress >= 80 && !hasOpenRecords, detail: progress >= 80 && !hasOpenRecords ? 'Layak diajukan ke komandan.' : 'Perlu peningkatan progress atau penutupan record open.' }
+    ];
+  }, [openRecordCount, openTaskCount, progress, records.length, tasks.length]);
 
   const relatedModuleSummaries = useMemo(() => {
     const moduleMeta = moduleMetaMap[location.pathname];
@@ -191,6 +211,39 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
       .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
       .slice(0, 4);
   }, [location.pathname, moduleSyncMap]);
+
+  const commandRecommendation = useMemo(() => {
+    const allModules = Object.values(parseModuleSyncMap(JSON.stringify(moduleSyncMap)));
+    const aggregate = [
+      ...allModules.filter((item) => item.path !== location.pathname),
+      {
+        path: location.pathname,
+        title,
+        group: moduleMetaMap[location.pathname]?.group ?? 'Core Module',
+        progress,
+        openTasks: openTaskCount,
+        totalRecords: records.length,
+        openRecords: openRecordCount,
+        updatedAt: new Date().toISOString()
+      }
+    ];
+
+    const avgProgress = aggregate.length ? Math.round(aggregate.reduce((sum, item) => sum + item.progress, 0) / aggregate.length) : progress;
+    const totalOpen = aggregate.reduce((sum, item) => sum + item.openTasks + item.openRecords, 0);
+    const status = avgProgress >= 80 && totalOpen <= Math.max(aggregate.length, 1) ? 'GREEN' : avgProgress >= 55 ? 'AMBER' : 'RED';
+
+    return {
+      moduleCount: aggregate.length,
+      avgProgress,
+      totalOpen,
+      status,
+      message: status === 'GREEN'
+        ? 'Seluruh alur lintas modul relatif stabil. Rekomendasi: lanjutkan eksekusi misi.'
+        : status === 'AMBER'
+          ? 'Ada beberapa dependency lintas modul yang perlu ditutup sebelum eksekusi penuh.'
+          : 'Banyak dependency kritis belum terselesaikan. Prioritaskan closure sebelum approval komandan.'
+    };
+  }, [location.pathname, moduleSyncMap, openRecordCount, openTaskCount, progress, records.length, title]);
 
   const saveTasks = (next: ChecklistItem[]) => {
     setTasks(next);
@@ -258,7 +311,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         </div>
         <div className="card">
           <p className="text-xs uppercase tracking-wide text-slate-500">Open Items</p>
-          <p className="mt-2 text-2xl font-bold">{records.filter((record) => !/closed|done|resolved|synced|completed|validated/i.test(record.status)).length}</p>
+          <p className="mt-2 text-2xl font-bold">{openRecordCount}</p>
         </div>
         <div className="card">
           <p className="text-xs uppercase tracking-wide text-slate-500">Storage</p>
@@ -358,6 +411,31 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
       </div>
 
       <div className="card space-y-3">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-semibold">Command Flow Gate</h3>
+            <Badge label={`State ${commandRecommendation.status}`} tone={commandRecommendation.status === 'GREEN' ? 'green' : commandRecommendation.status === 'AMBER' ? 'yellow' : 'red'} />
+          </div>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{commandRecommendation.message}</p>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <Badge label={`Modul Aktif ${commandRecommendation.moduleCount}`} tone="green" />
+            <Badge label={`Average Progress ${commandRecommendation.avgProgress}%`} tone={commandRecommendation.avgProgress >= 80 ? 'green' : commandRecommendation.avgProgress >= 55 ? 'yellow' : 'red'} />
+            <Badge label={`Total Open Dependency ${commandRecommendation.totalOpen}`} tone={commandRecommendation.totalOpen === 0 ? 'green' : commandRecommendation.totalOpen > commandRecommendation.moduleCount * 2 ? 'red' : 'yellow'} />
+          </div>
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-2">
+          {flowStages.map((stage) => (
+            <div key={stage.name} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold">{stage.name}</p>
+                <Badge label={stage.complete ? 'Done' : 'Pending'} tone={stage.complete ? 'green' : 'yellow'} />
+              </div>
+              <p className="mt-1 text-xs text-slate-500">{stage.detail}</p>
+            </div>
+          ))}
+        </div>
+
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-semibold">Koneksi Antar Modul (localStorage)</h3>
           <p className="text-xs text-slate-500">Shared key: {sharedModuleStorageKey}</p>
@@ -411,6 +489,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
             </div>
           </div>
           <div className="space-y-2">
+            {filteredTasks.length === 0 && <p className="rounded-lg border border-dashed border-slate-200 p-3 text-sm text-slate-500 dark:border-slate-700">Tidak ada task pada filter ini.</p>}
             {filteredTasks.map((task) => (
               <label key={task.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
                 <div className="min-w-0 flex-1">
