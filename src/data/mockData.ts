@@ -121,6 +121,7 @@ const incidents: Incident[] = Array.from({ length: 14 }).map((_, i) => ({
 export const initialState: AppState = {
   role: 'Pilot',
   theme: 'dark',
+  missionProfile: 'Routine Ops',
   loggedIn: false,
   globalSearch: '',
   profiles: pilots,

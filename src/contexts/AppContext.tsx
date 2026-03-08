@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type Dispatch, type ReactNode } from 'react';
 import { initialState } from '../data/mockData';
-import type { AppState, AuditLogEntry, Incident, LogbookEntry, OrmAssessment, Role, ScheduleItem, Theme, TrainingItem } from '../types';
+import type { AppState, AuditLogEntry, Incident, LogbookEntry, MissionProfile, OrmAssessment, Role, ScheduleItem, Theme, TrainingItem } from '../types';
 import { readJsonStorage, writeJsonStorage } from '../utils/storage';
 import { calculateReadinessScore } from '../utils/readiness';
 import { hasActionAccess } from '../utils/rbac';
@@ -9,6 +9,7 @@ type Action =
   | { type: 'LOGIN'; payload: Role }
   | { type: 'SET_ROLE'; payload: Role }
   | { type: 'SET_THEME'; payload: Theme }
+  | { type: 'SET_MISSION_PROFILE'; payload: MissionProfile }
   | { type: 'SET_SEARCH'; payload: string }
   | { type: 'ADD_LOGBOOK'; payload: LogbookEntry }
   | { type: 'ADD_SCHEDULE'; payload: ScheduleItem }
@@ -50,6 +51,11 @@ const reducer = (state: AppState, action: Action): AppState => {
       return { ...state, role: action.payload };
     case 'SET_THEME':
       return { ...state, theme: action.payload };
+    case 'SET_MISSION_PROFILE':
+      return pushAudit(
+        { ...state, missionProfile: action.payload },
+        { action: 'UPDATE', entity: 'MissionProfile', detail: action.payload, role: state.role }
+      );
     case 'SET_SEARCH':
       return { ...state, globalSearch: action.payload };
     case 'ADD_LOGBOOK':

@@ -2,6 +2,8 @@ export type Role = 'Pilot' | 'Flight Safety Officer' | 'Ops Officer' | 'Medical'
 
 export type Theme = 'light' | 'dark';
 
+export type MissionProfile = 'Training' | 'Routine Ops' | 'High-Risk Ops';
+
 export interface PilotProfile {
   id: string;
   name: string;
@@ -103,6 +105,7 @@ export interface Message {
 export interface AppState {
   role: Role;
   theme: Theme;
+  missionProfile: MissionProfile;
   loggedIn: boolean;
   globalSearch: string;
   profiles: PilotProfile[];

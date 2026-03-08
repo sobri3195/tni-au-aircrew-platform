@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
+import type { MissionProfile } from '../types';
 import { daysUntil } from '../utils/date';
 import { calculateReadinessAlerts, calculateReadinessComponents } from '../utils/readiness';
 import { Badge } from '../components/ui/Badge';
@@ -23,8 +24,9 @@ const statusTone = (score: number) => {
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
-  const { state, readinessScore } = useApp();
+  const { state, readinessScore, dispatch } = useApp();
   const [rikkesRecords] = useLocalStorageState('aircrew-rikkes-data-v1', initialRikkesRecords);
+  const missionProfiles: MissionProfile[] = ['Training', 'Routine Ops', 'High-Risk Ops'];
   const rikkesSummary = useMemo(() => calculateRikkesSummary(rikkesRecords), [rikkesRecords]);
 
   const kpi = useMemo(() => {
@@ -106,6 +108,20 @@ export const DashboardPage = () => {
             <p className="text-xs uppercase tracking-[0.2em] text-cyan-100">Command Center</p>
             <h2 className="mt-1 text-2xl font-bold md:text-3xl">Dashboard Readiness</h2>
             <p className="mt-2 max-w-2xl text-sm text-cyan-50">Ringkasan kesiapan misi lintas personel, risiko, dan status armada.</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-cyan-100">Mission Profile:</span>
+              <div className="flex items-center gap-2">
+                {missionProfiles.map((profile) => (
+                  <button
+                    key={profile}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${state.missionProfile === profile ? 'bg-white text-sky-700' : 'bg-white/20 text-white hover:bg-white/30'}`}
+                    onClick={() => dispatch({ type: 'SET_MISSION_PROFILE', payload: profile })}
+                  >
+                    {profile}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div className={`rounded-xl px-4 py-3 ${missionState.style}`}>
             <p className="text-xs font-semibold uppercase">Mission State</p>
