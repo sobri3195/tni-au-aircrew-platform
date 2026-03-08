@@ -20,7 +20,8 @@ const statusByGroup: Record<string, ModuleKpi['status'][]> = {
   'Flight Ops & Logbook': ['good', 'watch', 'watch'],
   'Risk & Safety (ORM)': ['critical', 'watch', 'good'],
   'Command & Readiness Analytics': ['watch', 'good', 'watch'],
-  'Monitoring Eksternal': ['watch', 'critical', 'good']
+  'Monitoring Eksternal': ['watch', 'critical', 'good'],
+  'Mission Lifecycle Terpadu': ['watch', 'watch', 'critical']
 };
 
 const groupDefaults: Record<string, Omit<ModuleBlueprint, 'kpis' | 'workflow'>> = {
@@ -53,6 +54,11 @@ const groupDefaults: Record<string, Omit<ModuleBlueprint, 'kpis' | 'workflow'>> 
     alerts: ['NOTAM kategori hazard dipush ke semua scheduler.', 'Cuaca severe secara otomatis menurunkan mission state.', 'Duty-rest violation mengunci assignment kru.'],
     complianceChecks: ['Sumber data eksternal tervalidasi timestamp.', 'Cache offline tersinkron saat koneksi pulih.', 'Conflict resolution menghasilkan audit trail.'],
     slaTarget: 'SLA ingest data eksternal: 10 menit.'
+  },
+  'Mission Lifecycle Terpadu': {
+    alerts: ['Mission intake yang belum lengkap memblokir paket misi.', 'Go/No-Go wajib menunggu sinkronisasi ORM, cuaca, dan medical gate.', 'Lessons learned kritikal otomatis membuat task corrective action.'],
+    complianceChecks: ['Setiap misi memiliki jejak approval berurutan.', 'Branch contingency terdokumentasi beserta trigger aktivasi.', 'Feedback training tersambung ke kru dan mission type terkait.'],
+    slaTarget: 'SLA keputusan gate misi: maksimal 15 menit sebelum ETD.'
   }
 };
 
@@ -62,7 +68,8 @@ const workflowByKeyword: Array<{ keyword: RegExp; tasks: string[] }> = [
   { keyword: /logbook|sortie|debrief|aircraft|physio/i, tasks: ['Review data sortie dan event penting.', 'Konfirmasi crew assignment bebas konflik.', 'Publikasikan debrief dan corrective actions.'] },
   { keyword: /risk|incident|warning|analytics|orm/i, tasks: ['Hitung skor risiko menggunakan template aktif.', 'Tindak lanjuti mitigasi dengan due date jelas.', 'Eskalasi alert kritikal ke chain of command.'] },
   { keyword: /readiness|mission state|priority|audit|rbac|offline|sync|export/i, tasks: ['Perbarui score readiness lintas modul.', 'Verifikasi aturan manual override.', 'Catat semua perubahan pada audit log.'] },
-  { keyword: /notam|weather|duty|rest/i, tasks: ['Tarik feed eksternal terbaru.', 'Deteksi dampak terhadap jadwal misi.', 'Broadcast advisory ke user terkait.'] }
+  { keyword: /notam|weather|duty|rest/i, tasks: ['Tarik feed eksternal terbaru.', 'Deteksi dampak terhadap jadwal misi.', 'Broadcast advisory ke user terkait.'] },
+  { keyword: /mission|intake|gate|contingency|lesson|feedback|what-if|package|execution/i, tasks: ['Pastikan dependensi lintas modul sudah tertaut.', 'Eksekusi decision gate sesuai SLA komando.', 'Kirim feedback hasil misi ke training dan readiness loop.'] }
 ];
 
 const buildKpis = (title: string, group: string): ModuleKpi[] => {

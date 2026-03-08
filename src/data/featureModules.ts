@@ -279,5 +279,85 @@ export const requestedFeatureModules: FeatureModule[] = [
     title: 'Crew Duty & Rest Monitor',
     description: 'Monitor kepatuhan duty/rest dan pelanggaran limit.',
     icon: '⏱️'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/mission-intake-hub',
+    navLabel: 'Mission Intake Hub',
+    title: 'Mission Intake Hub',
+    description: 'Pintu masuk requirement misi yang menautkan objective ke modul package, risiko, dan alokasi kru.',
+    icon: '🧾'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/crew-readiness-allocator',
+    navLabel: 'Crew Readiness Allocator',
+    title: 'Crew Readiness Allocator',
+    description: 'Mencocokkan demand misi dari Mission Intake Hub dengan readiness medical, training, dan duty-rest kru.',
+    icon: '🧑‍✈️'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/mission-package-linker',
+    navLabel: 'Mission Package Linker',
+    title: 'Mission Package Linker',
+    description: 'Menyatukan dokumen brief, aircraft plan, dan assignment kru sebelum diproses ORM.',
+    icon: '🧩'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/integrated-go-no-go-gate',
+    navLabel: 'Integrated Go/No-Go Gate',
+    title: 'Integrated Go/No-Go Gate',
+    description: 'Gerbang keputusan otomatis berbasis data ORM, cuaca, NOTAM, dan status personel lintas modul.',
+    icon: '🚦'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/mission-execution-watch',
+    navLabel: 'Mission Execution Watch',
+    title: 'Mission Execution Watch',
+    description: 'Monitoring eksekusi sortie real-time dengan event feed untuk debrief dan safety workflow.',
+    icon: '🛰️'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/contingency-branch-manager',
+    navLabel: 'Contingency Branch Manager',
+    title: 'Contingency Branch Manager',
+    description: 'Kelola percabangan rencana saat cuaca, aircraft, atau kesehatan kru berubah ketika misi berjalan.',
+    icon: '🌐'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/post-mission-recovery-loop',
+    navLabel: 'Post-Mission Recovery Loop',
+    title: 'Post-Mission Recovery Loop',
+    description: 'Hubungkan debrief pasca terbang, status fatigue, dan rekomendasi recovery ke jadwal berikutnya.',
+    icon: '🔁'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/lessons-learned-fusion',
+    navLabel: 'Lessons Learned Fusion',
+    title: 'Lessons Learned Fusion',
+    description: 'Konsolidasi lesson learned dari incident, training, dan debrief untuk update SOP serta skenario latihan.',
+    icon: '📚'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/adaptive-training-feedback',
+    navLabel: 'Adaptive Training Feedback',
+    title: 'Adaptive Training Feedback',
+    description: 'Umpan balik otomatis dari Lessons Learned Fusion untuk memprioritaskan remedial training per kru.',
+    icon: '🎯'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/command-readiness-what-if',
+    navLabel: 'Command Readiness What-If',
+    title: 'Command Readiness What-If Simulator',
+    description: 'Simulasi dampak perubahan alokasi kru atau risiko misi terhadap readiness score komando secara instan.',
+    icon: '🧠'
   }
 ];

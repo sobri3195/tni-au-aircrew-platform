@@ -30,7 +30,8 @@ const moduleGroupAccess: Record<string, AccessRule> = {
   'Flight Ops & Logbook': { view: ['Pilot', 'Ops Officer', 'Commander/Admin'], write: ['Pilot', 'Ops Officer', 'Commander/Admin'] },
   'Risk & Safety (ORM)': { view: ['Flight Safety Officer', 'Ops Officer', 'Commander/Admin'], write: ['Flight Safety Officer', 'Ops Officer', 'Commander/Admin'] },
   'Command & Readiness Analytics': { view: ['Ops Officer', 'Commander/Admin'], write: ['Commander/Admin'] },
-  'Monitoring Eksternal': { view: ['Pilot', 'Flight Safety Officer', 'Ops Officer', 'Commander/Admin'], write: ['Ops Officer', 'Commander/Admin'] }
+  'Monitoring Eksternal': { view: ['Pilot', 'Flight Safety Officer', 'Ops Officer', 'Commander/Admin'], write: ['Ops Officer', 'Commander/Admin'] },
+  'Mission Lifecycle Terpadu': { view: ['Pilot', 'Flight Safety Officer', 'Ops Officer', 'Commander/Admin'], write: ['Flight Safety Officer', 'Ops Officer', 'Commander/Admin'] }
 };
 
 const requestedModuleAccessMap = requestedFeatureModules.reduce<Record<string, AccessRule>>((acc, module) => {
