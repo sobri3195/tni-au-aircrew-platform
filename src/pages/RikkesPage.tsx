@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import type { RikkesRecord, KategoriKesehatan, StatusRikkes } from '../types/rikkes';
 import { initialRikkesRecords, calculateRikkesSummary } from '../data/rikkesData';
+import { buildRikkesPdfBlob, buildRikkesPdfFileName } from '../utils/rikkesPdf';
 
 const STORAGE_KEY = 'aircrew-rikkes-data-v1';
 
@@ -12,6 +13,7 @@ export const RikkesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterKategori, setFilterKategori] = useState<KategoriKesehatan | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<StatusRikkes | 'all'>('all');
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
   const summary = useMemo(() => calculateRikkesSummary(records), [records]);
 
@@ -33,6 +35,46 @@ export const RikkesPage = () => {
     setSelectedRecordId(recordId);
     setActiveTab('detail');
   };
+
+  const resetPdfPreview = () => {
+    setPdfPreviewUrl(previousUrl => {
+      if (previousUrl) {
+        URL.revokeObjectURL(previousUrl);
+      }
+      return null;
+    });
+  };
+
+  const handleGeneratePdfPreview = (record: RikkesRecord) => {
+    const pdfBlob = buildRikkesPdfBlob(record);
+    const objectUrl = URL.createObjectURL(pdfBlob);
+    setPdfPreviewUrl(previousUrl => {
+      if (previousUrl) {
+        URL.revokeObjectURL(previousUrl);
+      }
+      return objectUrl;
+    });
+  };
+
+  const handleDownloadPdf = (record: RikkesRecord) => {
+    const pdfBlob = buildRikkesPdfBlob(record);
+    const downloadUrl = URL.createObjectURL(pdfBlob);
+    const anchor = document.createElement('a');
+    anchor.href = downloadUrl;
+    anchor.download = buildRikkesPdfFileName(record);
+    anchor.click();
+    URL.revokeObjectURL(downloadUrl);
+  };
+
+  useEffect(() => {
+    resetPdfPreview();
+  }, [selectedRecordId]);
+
+  useEffect(() => {
+    return () => {
+      resetPdfPreview();
+    };
+  }, []);
 
   const kategoriColors: Record<KategoriKesehatan, string> = {
     A: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200',
@@ -56,11 +98,28 @@ export const RikkesPage = () => {
           <div className="mb-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <button onClick={() => setActiveTab('list')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">←</button>
+                <button onClick={() => {
+                  resetPdfPreview();
+                  setActiveTab('list');
+                }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">←</button>
                 <div>
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Detail Rikkes</h1>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">{selectedRecord.identitas.nrp} • {selectedRecord.identitas.nama}</p>
                 </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => handleGeneratePdfPreview(selectedRecord)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition-colors"
+                >
+                  Preview PDF
+                </button>
+                <button
+                  onClick={() => handleDownloadPdf(selectedRecord)}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Unduh PDF
+                </button>
               </div>
             </div>
           </div>
@@ -113,6 +172,20 @@ export const RikkesPage = () => {
                   </div>
                 </section>
               )}
+              <section>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Preview Hasil Pemeriksaan (PDF)</h3>
+                {pdfPreviewUrl ? (
+                  <iframe
+                    title="Preview PDF Hasil Rikkes"
+                    src={pdfPreviewUrl}
+                    className="w-full h-[600px] border border-slate-200 dark:border-slate-700 rounded-lg"
+                  />
+                ) : (
+                  <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 p-6 text-sm text-slate-500 dark:text-slate-400">
+                    Klik tombol <span className="font-semibold text-slate-700 dark:text-slate-200">Preview PDF</span> untuk melihat pratinjau hasil pemeriksaan.
+                  </div>
+                )}
+              </section>
             </div>
           </div>
         </div>
