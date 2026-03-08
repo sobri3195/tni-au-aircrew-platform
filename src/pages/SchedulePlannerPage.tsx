@@ -2,12 +2,15 @@ import { useEffect, useMemo } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../contexts/AppContext';
+import { useRoleAccess } from '../hooks/useRoleAccess';
 import { useMasterData } from '../hooks/useMasterData';
 
 const isOverlap = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => aStart < bEnd && bStart < aEnd;
 
 export const SchedulePlannerPage = () => {
   const { state, dispatch } = useApp();
+  const { canDoAction } = useRoleAccess();
+  const canAddSchedule = canDoAction('ADD_SCHEDULE');
   const { masterData } = useMasterData();
   const search = state.globalSearch.trim().toLowerCase();
   const [title, setTitle] = useLocalStorageState('draft-schedule-title', '');
@@ -93,9 +96,9 @@ export const SchedulePlannerPage = () => {
         </select>
         <button
           className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={Boolean(validationError)}
+          disabled={Boolean(validationError) || !canAddSchedule}
           onClick={() => {
-            if (validationError) return;
+            if (!canAddSchedule || validationError) return;
             dispatch({
               type: 'ADD_SCHEDULE',
               payload: {
@@ -115,6 +118,7 @@ export const SchedulePlannerPage = () => {
           Tambah Kegiatan
         </button>
       </div>
+      {!canAddSchedule && <p className="text-sm text-amber-600">Role saat ini hanya bisa melihat jadwal.</p>}
       {validationError && <p className="text-sm text-rose-600">{validationError}</p>}
 
       <div className="space-y-2">

@@ -2,9 +2,12 @@ import { useMemo } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../contexts/AppContext';
+import { useRoleAccess } from '../hooks/useRoleAccess';
 
 export const NotamPage = () => {
   const { state, dispatch } = useApp();
+  const { canDoAction } = useRoleAccess();
+  const canAckNotam = canDoAction('ACK_NOTAM');
   const search = state.globalSearch.trim().toLowerCase();
   const [areaFilter, setAreaFilter] = useLocalStorageState('notam-area-filter', 'All');
   const [baseFilter, setBaseFilter] = useLocalStorageState('notam-base-filter', 'All');
@@ -43,6 +46,7 @@ export const NotamPage = () => {
         </select>
       </div>
 
+      {!canAckNotam && <p className="text-sm text-amber-600">Role saat ini hanya bisa melihat NOTAM tanpa acknowledge.</p>}
       <div className="space-y-2">
         {filtered.map((item) => (
           <div key={item.id} className="card flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -57,7 +61,7 @@ export const NotamPage = () => {
             {item.acknowledged ? (
               <Badge label="Acknowledged" tone="green" />
             ) : (
-              <button className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white" onClick={() => dispatch({ type: 'ACK_NOTAM', payload: item.id })}>
+              <button className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={!canAckNotam} onClick={() => canAckNotam && dispatch({ type: 'ACK_NOTAM', payload: item.id })}>
                 Acknowledge
               </button>
             )}

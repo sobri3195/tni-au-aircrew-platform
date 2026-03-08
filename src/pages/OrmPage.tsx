@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { useApp } from '../contexts/AppContext';
+import { useRoleAccess } from '../hooks/useRoleAccess';
 import { Badge } from '../components/ui/Badge';
 
 const calcRisk = (rest: number, weather: string, status: string, threat: number) => {
@@ -18,6 +19,8 @@ const calcRisk = (rest: number, weather: string, status: string, threat: number)
 
 export const OrmPage = () => {
   const { state, dispatch } = useApp();
+  const { canDoAction } = useRoleAccess();
+  const canAddOrm = canDoAction('ADD_ORM');
   const [form, setForm] = useLocalStorageState('draft-orm-form', { missionType: 'Training Sortie', crewRestHours: 8, weather: 'Good', aircraftStatus: 'FMC', threatLevel: 1 });
   const search = state.globalSearch.trim().toLowerCase();
   const result = calcRisk(form.crewRestHours, form.weather, form.aircraftStatus, form.threatLevel);
@@ -55,8 +58,9 @@ export const OrmPage = () => {
         <input className="input" type="number" min={1} max={5} value={form.threatLevel} onChange={(e) => setForm((p) => ({ ...p, threatLevel: Number(e.target.value) }))} />
         <button
           className="rounded-lg bg-sky-700 px-3 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={Boolean(validationError)}
+          disabled={Boolean(validationError) || !canAddOrm}
           onClick={() => {
+            if (!canAddOrm) return;
             dispatch({
               type: 'ADD_ORM',
               payload: {
@@ -74,6 +78,7 @@ export const OrmPage = () => {
           }}
         >Save ORM</button>
       </div>
+      {!canAddOrm && <p className="text-sm text-amber-600">Role saat ini hanya bisa melihat data ORM.</p>}
       {validationError && <p className="text-sm text-rose-600">{validationError}</p>}
       <div className="card">
         <p className="mb-2">Risk Level: <Badge label={result.riskLevel} tone={result.riskLevel === 'High' ? 'red' : result.riskLevel === 'Medium' ? 'yellow' : 'green'} /></p>

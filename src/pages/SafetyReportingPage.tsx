@@ -2,9 +2,12 @@ import { useMemo } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { Badge } from '../components/ui/Badge';
 import { useApp } from '../contexts/AppContext';
+import { useRoleAccess } from '../hooks/useRoleAccess';
 
 export const SafetyReportingPage = () => {
   const { state, dispatch } = useApp();
+  const { canDoAction } = useRoleAccess();
+  const canAddIncident = canDoAction('ADD_INCIDENT');
   const search = state.globalSearch.trim().toLowerCase();
   const [title, setTitle] = useLocalStorageState('draft-safety-title', '');
   const [type, setType] = useLocalStorageState<'Hazard' | 'Near-Miss' | 'Incident'>('draft-safety-type', 'Hazard');
@@ -42,9 +45,9 @@ export const SafetyReportingPage = () => {
         </label>
         <button
           className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={Boolean(validationError)}
+          disabled={Boolean(validationError) || !canAddIncident}
           onClick={() => {
-            if (validationError) return;
+            if (!canAddIncident || validationError) return;
             dispatch({
               type: 'ADD_INCIDENT',
               payload: {
@@ -63,6 +66,7 @@ export const SafetyReportingPage = () => {
           Submit Report
         </button>
       </div>
+      {!canAddIncident && <p className="text-sm text-amber-600">Role saat ini hanya bisa melihat incident.</p>}
       {validationError && <p className="text-sm text-rose-600">{validationError}</p>}
 
       <div className="space-y-2">

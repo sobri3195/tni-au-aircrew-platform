@@ -3,6 +3,7 @@ import { initialState } from '../data/mockData';
 import type { AppState, AuditLogEntry, Incident, LogbookEntry, OrmAssessment, Role, ScheduleItem, Theme, TrainingItem } from '../types';
 import { readJsonStorage, writeJsonStorage } from '../utils/storage';
 import { calculateReadinessScore } from '../utils/readiness';
+import { hasActionAccess } from '../utils/rbac';
 
 type Action =
   | { type: 'LOGIN'; payload: Role }
@@ -36,6 +37,12 @@ const pushAudit = (state: AppState, payload: Omit<AuditLogEntry, 'id' | 'timesta
 });
 
 const reducer = (state: AppState, action: Action): AppState => {
+  const denyIfNoAccess = (permission: Parameters<typeof hasActionAccess>[1], nextState: () => AppState): AppState => {
+    if (!hasActionAccess(state.role, permission)) {
+      return pushAudit(state, { action: 'UPDATE', entity: 'ACCESS_DENIED', detail: `${permission} blocked for ${state.role}`, role: state.role });
+    }
+    return nextState();
+  };
   switch (action.type) {
     case 'LOGIN':
       return { ...state, role: action.payload, loggedIn: true };
@@ -46,24 +53,36 @@ const reducer = (state: AppState, action: Action): AppState => {
     case 'SET_SEARCH':
       return { ...state, globalSearch: action.payload };
     case 'ADD_LOGBOOK':
-      return pushAudit({ ...state, logbook: [action.payload, ...state.logbook] }, { action: 'CREATE', entity: 'Logbook', detail: action.payload.id, role: state.role });
+      return denyIfNoAccess('ADD_LOGBOOK', () =>
+        pushAudit({ ...state, logbook: [action.payload, ...state.logbook] }, { action: 'CREATE', entity: 'Logbook', detail: action.payload.id, role: state.role })
+      );
     case 'ADD_SCHEDULE':
-      return pushAudit({ ...state, schedule: [action.payload, ...state.schedule] }, { action: 'CREATE', entity: 'Schedule', detail: action.payload.title, role: state.role });
+      return denyIfNoAccess('ADD_SCHEDULE', () =>
+        pushAudit({ ...state, schedule: [action.payload, ...state.schedule] }, { action: 'CREATE', entity: 'Schedule', detail: action.payload.title, role: state.role })
+      );
     case 'ADD_ORM':
-      return pushAudit({ ...state, orm: [action.payload, ...state.orm] }, { action: 'CREATE', entity: 'ORM', detail: action.payload.riskLevel, role: state.role });
+      return denyIfNoAccess('ADD_ORM', () =>
+        pushAudit({ ...state, orm: [action.payload, ...state.orm] }, { action: 'CREATE', entity: 'ORM', detail: action.payload.riskLevel, role: state.role })
+      );
     case 'ADD_TRAINING':
-      return pushAudit({ ...state, trainings: [action.payload, ...state.trainings] }, { action: 'CREATE', entity: 'Training', detail: action.payload.type, role: state.role });
+      return denyIfNoAccess('ADD_TRAINING', () =>
+        pushAudit({ ...state, trainings: [action.payload, ...state.trainings] }, { action: 'CREATE', entity: 'Training', detail: action.payload.type, role: state.role })
+      );
     case 'ADD_INCIDENT':
-      return pushAudit({ ...state, incidents: [action.payload, ...state.incidents] }, { action: 'CREATE', entity: 'Incident', detail: action.payload.type, role: state.role });
+      return denyIfNoAccess('ADD_INCIDENT', () =>
+        pushAudit({ ...state, incidents: [action.payload, ...state.incidents] }, { action: 'CREATE', entity: 'Incident', detail: action.payload.type, role: state.role })
+      );
     case 'ADD_AUDIT':
       return pushAudit(state, action.payload);
     case 'ACK_NOTAM':
-      return pushAudit(
-        {
-          ...state,
-          notams: state.notams.map((item) => (item.id === action.payload ? { ...item, acknowledged: true } : item))
-        },
-        { action: 'UPDATE', entity: 'NOTAM', detail: action.payload, role: state.role }
+      return denyIfNoAccess('ACK_NOTAM', () =>
+        pushAudit(
+          {
+            ...state,
+            notams: state.notams.map((item) => (item.id === action.payload ? { ...item, acknowledged: true } : item))
+          },
+          { action: 'UPDATE', entity: 'NOTAM', detail: action.payload, role: state.role }
+        )
       );
     default:
       return state;

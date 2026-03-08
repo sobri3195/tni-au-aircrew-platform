@@ -1,12 +1,15 @@
 import { useMemo } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { useApp } from '../contexts/AppContext';
+import { useRoleAccess } from '../hooks/useRoleAccess';
 import { Table } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
 import { daysUntil } from '../utils/date';
 
 export const TrainingPage = () => {
   const { state, dispatch } = useApp();
+  const { canDoAction } = useRoleAccess();
+  const canAddTraining = canDoAction('ADD_TRAINING');
   const [type, setType] = useLocalStorageState('draft-training-type', 'CRM');
   const search = state.globalSearch.trim().toLowerCase();
   const normalizedType = type.trim();
@@ -35,9 +38,9 @@ export const TrainingPage = () => {
         <div className="card">Expiring &lt;30 hari: {state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length}</div>
         <button
           className="rounded-xl bg-sky-700 px-3 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={Boolean(validationError)}
+          disabled={Boolean(validationError) || !canAddTraining}
           onClick={() => {
-            if (validationError) return;
+            if (!canAddTraining || validationError) return;
             dispatch({
               type: 'ADD_TRAINING',
               payload: {
@@ -56,6 +59,7 @@ export const TrainingPage = () => {
         </button>
       </div>
       <input className="input max-w-sm" value={type} onChange={(e) => setType(e.target.value)} placeholder="Training type" />
+      {!canAddTraining && <p className="text-sm text-amber-600">Role saat ini hanya bisa melihat data training.</p>}
       {validationError && <p className="text-sm text-rose-600">{validationError}</p>}
       <Table headers={['Type', 'Pilot', 'Completion', 'Expiry', 'Status']}>
         {visibleTrainings.map((item) => {
