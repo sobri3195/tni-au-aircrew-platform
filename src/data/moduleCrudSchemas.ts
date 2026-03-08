@@ -273,6 +273,106 @@ export const moduleCrudSchemas: Record<string, ModuleCrudSchema> = {
       { key: 'restHours', label: 'Rest Hours', type: 'number' },
       { key: 'monitorNote', label: 'Monitoring Note', type: 'textarea' }
     ]
+  },
+  '/mission-intake-hub': {
+    entityName: 'Mission Demand',
+    statuses: ['Draft', 'Qualified', 'Rejected'],
+    fields: [
+      { key: 'missionCode', label: 'Mission Code', type: 'text', required: true },
+      { key: 'objective', label: 'Objective', type: 'textarea', required: true },
+      { key: 'priority', label: 'Priority', type: 'select', options: ['Routine', 'Important', 'Urgent', 'Critical'], required: true },
+      { key: 'targetEtd', label: 'Target ETD', type: 'date' }
+    ]
+  },
+  '/crew-readiness-allocator': {
+    entityName: 'Crew Allocation',
+    statuses: ['Candidate', 'Conflict', 'Assigned'],
+    fields: [
+      { key: 'missionCode', label: 'Mission Code', type: 'text', required: true },
+      { key: 'crewName', label: 'Crew Name', type: 'text', required: true },
+      { key: 'readinessScore', label: 'Readiness Score', type: 'number' },
+      { key: 'blockingFactor', label: 'Blocking Factor', type: 'textarea' }
+    ]
+  },
+  '/mission-package-linker': {
+    entityName: 'Mission Package',
+    statuses: ['Collecting', 'Ready for Gate', 'Approved'],
+    fields: [
+      { key: 'missionCode', label: 'Mission Code', type: 'text', required: true },
+      { key: 'briefRef', label: 'Brief Reference', type: 'text', required: true },
+      { key: 'aircraftPlan', label: 'Aircraft Plan', type: 'textarea' },
+      { key: 'crewManifest', label: 'Crew Manifest', type: 'textarea' }
+    ]
+  },
+  '/integrated-go-no-go-gate': {
+    entityName: 'Go/No-Go Decision',
+    statuses: ['Pending Inputs', 'Go', 'No-Go', 'Override'],
+    fields: [
+      { key: 'missionCode', label: 'Mission Code', type: 'text', required: true },
+      { key: 'ormScore', label: 'ORM Score', type: 'number' },
+      { key: 'weatherState', label: 'Weather State', type: 'select', options: ['Green', 'Amber', 'Red'] },
+      { key: 'decisionNote', label: 'Decision Note', type: 'textarea' }
+    ]
+  },
+  '/mission-execution-watch': {
+    entityName: 'Execution Event',
+    statuses: ['Observed', 'Escalated', 'Closed'],
+    fields: [
+      { key: 'missionCode', label: 'Mission Code', type: 'text', required: true },
+      { key: 'eventTime', label: 'Event Time', type: 'date' },
+      { key: 'eventType', label: 'Event Type', type: 'select', options: ['Comms', 'Weather Shift', 'Aircraft', 'Medical', 'Safety'], required: true },
+      { key: 'impact', label: 'Impact', type: 'textarea' }
+    ]
+  },
+  '/contingency-branch-manager': {
+    entityName: 'Contingency Branch',
+    statuses: ['Prepared', 'Activated', 'Resolved'],
+    fields: [
+      { key: 'missionCode', label: 'Mission Code', type: 'text', required: true },
+      { key: 'trigger', label: 'Trigger', type: 'textarea', required: true },
+      { key: 'branchPlan', label: 'Branch Plan', type: 'textarea', required: true },
+      { key: 'owner', label: 'Owner', type: 'text' }
+    ]
+  },
+  '/post-mission-recovery-loop': {
+    entityName: 'Recovery Action',
+    statuses: ['Logged', 'In Recovery', 'Recovered'],
+    fields: [
+      { key: 'missionCode', label: 'Mission Code', type: 'text', required: true },
+      { key: 'crew', label: 'Crew', type: 'text', required: true },
+      { key: 'fatigueIndex', label: 'Fatigue Index', type: 'number' },
+      { key: 'recoveryPlan', label: 'Recovery Plan', type: 'textarea' }
+    ]
+  },
+  '/lessons-learned-fusion': {
+    entityName: 'Lesson Item',
+    statuses: ['Draft', 'Validated', 'Published'],
+    fields: [
+      { key: 'missionCode', label: 'Mission Code', type: 'text', required: true },
+      { key: 'source', label: 'Source', type: 'select', options: ['Debrief', 'Incident', 'Training', 'ORM'], required: true },
+      { key: 'lesson', label: 'Lesson', type: 'textarea', required: true },
+      { key: 'recommendedChange', label: 'Recommended Change', type: 'textarea' }
+    ]
+  },
+  '/adaptive-training-feedback': {
+    entityName: 'Training Feedback',
+    statuses: ['Suggested', 'Assigned', 'Completed'],
+    fields: [
+      { key: 'lessonRef', label: 'Lesson Reference', type: 'text', required: true },
+      { key: 'crew', label: 'Crew', type: 'text', required: true },
+      { key: 'trainingType', label: 'Training Type', type: 'text', required: true },
+      { key: 'targetDate', label: 'Target Date', type: 'date' }
+    ]
+  },
+  '/command-readiness-what-if': {
+    entityName: 'What-If Scenario',
+    statuses: ['Draft', 'Simulated', 'Adopted'],
+    fields: [
+      { key: 'scenarioName', label: 'Scenario Name', type: 'text', required: true },
+      { key: 'missionCode', label: 'Mission Code', type: 'text' },
+      { key: 'changeInput', label: 'Change Input', type: 'textarea', required: true },
+      { key: 'predictedState', label: 'Predicted State', type: 'select', options: ['GREEN', 'AMBER', 'RED'] }
+    ]
   }
 };
 
