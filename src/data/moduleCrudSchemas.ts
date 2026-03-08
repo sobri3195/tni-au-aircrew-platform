@@ -18,6 +18,86 @@ export type ModuleCrudSchema = {
 const commonStatuses = ['Draft', 'Open', 'In Review', 'Closed'];
 
 export const moduleCrudSchemas: Record<string, ModuleCrudSchema> = {
+  '/medical-profile': {
+    entityName: 'Medical Profile',
+    statuses: ['Fit', 'Limited', 'Unfit'],
+    fields: [
+      { key: 'aircrew', label: 'Aircrew', type: 'text', required: true },
+      { key: 'medicalClass', label: 'Medical Class', type: 'select', options: ['Class I', 'Class II', 'Class III'], required: true },
+      { key: 'waiverStatus', label: 'Waiver Status', type: 'select', options: ['None', 'Active', 'Expired'] },
+      { key: 'lastExamDate', label: 'Last Exam Date', type: 'date', required: true }
+    ]
+  },
+  '/medical-validity': {
+    entityName: 'Medical Validity',
+    statuses: ['Valid', 'Watch 30 Days', 'Expired'],
+    fields: [
+      { key: 'aircrew', label: 'Aircrew', type: 'text', required: true },
+      { key: 'medicalCertificateNo', label: 'Certificate No', type: 'text', required: true },
+      { key: 'validUntil', label: 'Valid Until', type: 'date', required: true },
+      { key: 'fitState', label: 'Fit State', type: 'select', options: ['Fit', 'Temporary Unfit', 'Unfit'] }
+    ]
+  },
+  '/medication-restriction': {
+    entityName: 'Medication Restriction',
+    statuses: ['Monitoring', 'Grounded', 'Cleared'],
+    fields: [
+      { key: 'aircrew', label: 'Aircrew', type: 'text', required: true },
+      { key: 'medication', label: 'Medication', type: 'text', required: true },
+      { key: 'sedationRisk', label: 'Sedation Risk', type: 'select', options: ['Low', 'Moderate', 'High'], required: true },
+      { key: 'restrictionNote', label: 'Restriction Note', type: 'textarea' }
+    ]
+  },
+  '/vaccination-monitoring': {
+    entityName: 'Vaccination Window',
+    statuses: ['Observed', 'Restricted', 'Released'],
+    fields: [
+      { key: 'aircrew', label: 'Aircrew', type: 'text', required: true },
+      { key: 'vaccineType', label: 'Vaccine Type', type: 'text', required: true },
+      { key: 'vaccinationDate', label: 'Vaccination Date', type: 'date', required: true },
+      { key: 'symptoms', label: 'Post-vaccine Symptoms', type: 'textarea' }
+    ]
+  },
+  '/fatigue-sleep-monitoring': {
+    entityName: 'Fatigue Monitoring',
+    statuses: ['Normal', 'Watch', 'Critical'],
+    fields: [
+      { key: 'aircrew', label: 'Aircrew', type: 'text', required: true },
+      { key: 'sleepHours', label: 'Sleep Hours', type: 'number', required: true },
+      { key: 'dutyHours', label: 'Duty Hours', type: 'number' },
+      { key: 'fatigueScore', label: 'Fatigue Score (1-10)', type: 'number', required: true }
+    ]
+  },
+  '/mental-readiness': {
+    entityName: 'Mental Readiness Check-in',
+    statuses: ['Stable', 'Needs Follow-up', 'Escalated'],
+    fields: [
+      { key: 'aircrew', label: 'Aircrew', type: 'text', required: true },
+      { key: 'checkInDate', label: 'Check-in Date', type: 'date', required: true },
+      { key: 'moodIndex', label: 'Mood Index (1-10)', type: 'number', required: true },
+      { key: 'notes', label: 'Confidential Notes', type: 'textarea' }
+    ]
+  },
+  '/physical-fitness': {
+    entityName: 'Physical Fitness Record',
+    statuses: ['Pass', 'Watch', 'Remedial'],
+    fields: [
+      { key: 'aircrew', label: 'Aircrew', type: 'text', required: true },
+      { key: 'bmi', label: 'BMI', type: 'number', required: true },
+      { key: 'bloodPressure', label: 'Blood Pressure', type: 'text', required: true },
+      { key: 'vo2Result', label: 'VO2 / Lari Result', type: 'text' }
+    ]
+  },
+  '/occupational-health': {
+    entityName: 'Occupational Exposure',
+    statuses: ['Normal', 'Observed', 'Action Required'],
+    fields: [
+      { key: 'aircrew', label: 'Aircrew', type: 'text', required: true },
+      { key: 'exposureType', label: 'Exposure Type', type: 'select', options: ['Noise', 'Chemical', 'Heat', 'Radiation'], required: true },
+      { key: 'exposureLevel', label: 'Exposure Level', type: 'select', options: ['Low', 'Medium', 'High'], required: true },
+      { key: 'mitigationPlan', label: 'Mitigation Plan', type: 'textarea' }
+    ]
+  },
   '/training-detail': {
     entityName: 'Training Item',
     statuses: ['Planned', 'In Progress', 'Completed', 'Overdue'],
