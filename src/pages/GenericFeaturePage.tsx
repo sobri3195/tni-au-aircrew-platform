@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { readJsonStorage } from '../utils/storage';
 import { useLocation } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
@@ -7,6 +7,7 @@ import { moduleBlueprints } from '../data/moduleBlueprints';
 import { getModuleCrudSchema } from '../data/moduleCrudSchemas';
 import { requestedFeatureModules } from '../data/featureModules';
 import { useRoleAccess } from '../hooks/useRoleAccess';
+import { exportCsv, exportSimplePdf } from '../utils/export';
 
 type ChecklistItem = {
   id: string;
@@ -38,6 +39,11 @@ type FlowStage = {
   name: string;
   complete: boolean;
   detail: string;
+};
+
+type ImportPayload = {
+  tasks?: ChecklistItem[];
+  records?: ModuleRecord[];
 };
 
 const workflowPreset: Record<string, string[]> = {
@@ -112,6 +118,50 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const [editId, setEditId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [statusValue, setStatusValue] = useState(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const exportRecordDataset = () => {
+    if (records.length === 0) return;
+    exportCsv(`${location.pathname.replace(/\//g, '-') || 'module'}-records.csv`, records.map((record) => ({
+      id: record.id,
+      status: record.status,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+      ...record.values
+    })));
+  };
+
+  const exportCommandBrief = () => {
+    exportSimplePdf(`${title} Command Brief`, [
+      `Route: ${location.pathname}`,
+      `Progress workflow: ${progress}%`,
+      `Total record: ${records.length}`,
+      `Open record: ${openRecordCount}`,
+      `Open task: ${openTaskCount}`,
+      `Generated: ${new Date().toLocaleString('id-ID')}`
+    ]);
+  };
+
+  const importModuleData = (payload: ImportPayload) => {
+    if (!canWriteCurrentRoute) return;
+
+    if (Array.isArray(payload.records)) {
+      const sanitizedRecords = payload.records.filter((record) => record?.id && record?.status && record?.values);
+      saveRecords(sanitizedRecords);
+    }
+
+    if (Array.isArray(payload.tasks)) {
+      const sanitizedTasks = payload.tasks.filter((task) => task?.id && task?.text && task?.owner).map((task) => ({ ...task, done: Boolean(task.done) }));
+      saveTasks(sanitizedTasks);
+    }
+  };
+
+  const resetModuleData = () => {
+    if (!canWriteCurrentRoute) return;
+    saveRecords([]);
+    saveTasks(defaultTask(location.pathname));
+    resetForm();
+  };
 
   useEffect(() => {
     const storedTasks = readJsonStorage<ChecklistItem[]>(storageKey, defaultTask(location.pathname));
@@ -299,6 +349,52 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
           Role Anda hanya memiliki akses baca untuk modul ini.
         </div>
       )}
+
+      <div className="card">
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50" onClick={exportRecordDataset} disabled={records.length === 0}>
+            Export CSV
+          </button>
+          <button className="rounded-md bg-indigo-700 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-800" onClick={exportCommandBrief}>
+            Export Command Brief
+          </button>
+          <button
+            className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canWriteCurrentRoute}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Import JSON
+          </button>
+          <button
+            className="rounded-md bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canWriteCurrentRoute}
+            onClick={resetModuleData}
+          >
+            Reset Modul
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                try {
+                  const parsed = JSON.parse(String(reader.result)) as ImportPayload;
+                  importModuleData(parsed);
+                } catch {
+                  // ignore invalid payload
+                }
+              };
+              reader.readAsText(file);
+              event.target.value = '';
+            }}
+          />
+        </div>
+      </div>
 
       <div className="grid gap-3 lg:grid-cols-4">
         <div className="card">
