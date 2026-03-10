@@ -359,5 +359,85 @@ export const requestedFeatureModules: FeatureModule[] = [
     title: 'Command Readiness What-If Simulator',
     description: 'Simulasi dampak perubahan alokasi kru atau risiko misi terhadap readiness score komando secara instan.',
     icon: '🧠'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/mission-objective-prioritizer',
+    navLabel: 'Mission Objective Prioritizer',
+    title: 'Mission Objective Prioritizer',
+    description: 'Prioritaskan objective misi berdasarkan urgensi operasional, ancaman, dan kesiapan resource.',
+    icon: '🎯'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/airspace-conflict-resolver',
+    navLabel: 'Airspace Conflict Resolver',
+    title: 'Airspace Conflict Resolver',
+    description: 'Deteksi konflik ruang udara antar sortie dan rekomendasikan deconfliction plan sebelum ETD.',
+    icon: '🗺️'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/fuel-endurance-optimizer',
+    navLabel: 'Fuel Endurance Optimizer',
+    title: 'Fuel Endurance Optimizer',
+    description: 'Optimasi perencanaan bahan bakar terhadap payload, profil rute, dan contingency reserve.',
+    icon: '⛽'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/threat-intel-fusion',
+    navLabel: 'Threat Intel Fusion',
+    title: 'Threat Intelligence Fusion',
+    description: 'Konsolidasi intel ancaman terkini agar paket misi menyesuaikan route, altitude, dan tactics.',
+    icon: '🛰️'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/sar-standby-coordinator',
+    navLabel: 'SAR Standby Coordinator',
+    title: 'SAR Standby Coordinator',
+    description: 'Koordinasi status kesiapan Search and Rescue standby untuk setiap window operasi misi.',
+    icon: '🛟'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/mission-comms-health',
+    navLabel: 'Mission Comms Health',
+    title: 'Mission Communications Health Monitor',
+    description: 'Pantau kesehatan komunikasi mission net, fallback channel, dan latency link antar elemen.',
+    icon: '📶'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/joint-asset-synchronizer',
+    navLabel: 'Joint Asset Synchronizer',
+    title: 'Joint Asset Synchronizer',
+    description: 'Sinkronisasi ketersediaan aset gabungan lintas unit agar sequencing misi tetap terpadu.',
+    icon: '🤝'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/targeting-validation-loop',
+    navLabel: 'Targeting Validation Loop',
+    title: 'Targeting Validation Loop',
+    description: 'Validasi target package berlapis melalui aturan ROE, collateral check, dan approval chain.',
+    icon: '🎛️'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/mission-reconstitution-planner',
+    navLabel: 'Mission Reconstitution Planner',
+    title: 'Mission Reconstitution Planner',
+    description: 'Rancang pemulihan force package pasca misi untuk menjaga tempo operasi berikutnya.',
+    icon: '🔧'
+  },
+  {
+    group: 'Mission Lifecycle Terpadu',
+    path: '/cross-unit-after-action-grid',
+    navLabel: 'Cross-Unit After Action Grid',
+    title: 'Cross-Unit After Action Grid',
+    description: 'Gabungkan after action review lintas unit untuk mempercepat standardisasi lesson learned.',
+    icon: '🧾'
   }
 ];
