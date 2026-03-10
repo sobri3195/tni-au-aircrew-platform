@@ -46,6 +46,8 @@ type ImportPayload = {
   records?: ModuleRecord[];
 };
 
+const closedStatusPattern = /closed|done|resolved|synced|completed|validated/i;
+
 const workflowPreset: Record<string, string[]> = {
   '/profile': ['Update profil penerbang', 'Validasi status currency', 'Kirim verifikasi ke komandan'],
   '/weather': ['Review METAR/TAF', 'Tandai cuaca kritis', 'Publish briefing cuaca'],
@@ -118,6 +120,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const [editId, setEditId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [statusValue, setStatusValue] = useState(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');
+  const [formError, setFormError] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const exportRecordDataset = () => {
@@ -142,6 +145,24 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
     ]);
   };
 
+  const exportModuleJson = () => {
+    const payload = {
+      module: location.pathname,
+      title,
+      exportedAt: new Date().toISOString(),
+      records,
+      tasks
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${location.pathname.replace(/\//g, '-') || 'module'}-snapshot.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   const importModuleData = (payload: ImportPayload) => {
     if (!canWriteCurrentRoute) return;
 
@@ -151,7 +172,13 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
     }
 
     if (Array.isArray(payload.tasks)) {
-      const sanitizedTasks = payload.tasks.filter((task) => task?.id && task?.text && task?.owner).map((task) => ({ ...task, done: Boolean(task.done) }));
+      const sanitizedTasks = payload.tasks
+        .filter((task) => task?.id && task?.text)
+        .map((task) => ({
+          ...task,
+          owner: owners.includes(task.owner) ? task.owner : 'Ops Officer',
+          done: Boolean(task.done)
+        }));
       saveTasks(sanitizedTasks);
     }
   };
@@ -178,7 +205,8 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const progress = Math.round((doneTask / Math.max(tasks.length, 1)) * 100);
   const filteredTasks = filter === 'all' ? tasks : tasks.filter((task) => (filter === 'done' ? task.done : !task.done));
   const openTaskCount = tasks.length - doneTask;
-  const openRecordCount = records.filter((record) => !/closed|done|resolved|synced|completed|validated/i.test(record.status)).length;
+  const openRecordCount = records.filter((record) => !closedStatusPattern.test(record.status)).length;
+  const moduleHealthScore = Math.max(0, Math.round(progress - openRecordCount * 4 - openTaskCount * 3 + (records.length > 0 ? 5 : 0)));
 
   const statusCounts = useMemo(() => records.reduce<Record<string, number>>((acc, record) => {
     acc[record.status] = (acc[record.status] ?? 0) + 1;
@@ -307,11 +335,17 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
     setFormValues(Object.fromEntries(schema.fields.map((field) => [field.key, ''])));
     setStatusValue(schema.defaultStatus ?? schema.statuses?.[0] ?? 'Open');
     setEditId(null);
+    setFormError('');
   };
 
   const submitRecord = () => {
     const hasRequiredMissing = schema.fields.some((field) => field.required && !formValues[field.key]?.trim());
-    if (hasRequiredMissing) return;
+    if (hasRequiredMissing) {
+      setFormError('Field wajib belum lengkap. Lengkapi input yang bertanda required.');
+      return;
+    }
+
+    setFormError('');
 
     const now = new Date().toISOString();
     if (editId) {
@@ -358,6 +392,9 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
           <button className="rounded-md bg-indigo-700 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-800" onClick={exportCommandBrief}>
             Export Command Brief
           </button>
+          <button className="rounded-md bg-violet-700 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-800" onClick={exportModuleJson}>
+            Export JSON
+          </button>
           <button
             className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canWriteCurrentRoute}
@@ -396,7 +433,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-4">
+      <div className="grid gap-3 lg:grid-cols-5">
         <div className="card">
           <p className="text-xs uppercase tracking-wide text-slate-500">{schema.entityName} Total</p>
           <p className="mt-2 text-2xl font-bold">{records.length}</p>
@@ -412,6 +449,11 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
         <div className="card">
           <p className="text-xs uppercase tracking-wide text-slate-500">Storage</p>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">localStorage key: <span className="font-semibold">{crudStorageKey}</span></p>
+        </div>
+        <div className="card">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Module Health</p>
+          <p className="mt-2 text-2xl font-bold">{moduleHealthScore}</p>
+          <p className="mt-1 text-xs text-slate-500">Kalkulasi dari progress, open task, dan open record.</p>
         </div>
       </div>
 
@@ -501,6 +543,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
               />
             );
           })}
+          {formError && <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-700/40 dark:bg-rose-900/20 dark:text-rose-200">{formError}</p>}
           <button className="w-full rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canWriteCurrentRoute} onClick={() => canWriteCurrentRoute && submitRecord()}>{editId ? 'Update Record' : 'Create Record'}</button>
           {editId && <button className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" onClick={resetForm}>Cancel Edit</button>}
         </div>
@@ -577,6 +620,20 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-semibold">Alur Kerja Operasional</h3>
             <div className="flex flex-wrap items-center gap-2 text-xs">
+              <button
+                className="rounded-md bg-emerald-100 px-2 py-1 text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!canWriteCurrentRoute || tasks.length === 0}
+                onClick={() => canWriteCurrentRoute && saveTasks(tasks.map((task) => ({ ...task, done: true })))}
+              >
+                Close All
+              </button>
+              <button
+                className="rounded-md bg-amber-100 px-2 py-1 text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!canWriteCurrentRoute || tasks.length === 0}
+                onClick={() => canWriteCurrentRoute && saveTasks(tasks.map((task) => ({ ...task, done: false })))}
+              >
+                Reopen All
+              </button>
               {['all', 'open', 'done'].map((item) => (
                 <button key={item} className={`rounded-md px-2 py-1 ${filter === item ? 'bg-sky-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`} onClick={() => setFilter(item as 'all' | 'open' | 'done')}>
                   {item.toUpperCase()}
@@ -646,7 +703,9 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
           onClick={() => {
             if (!canWriteCurrentRoute) return;
             const generated = aiInsight.recommendations.map((item, index) => ({ id: `ai-${Date.now()}-${index}`, text: `[AI] ${item.text}`, owner: item.owner, done: false }));
-            saveTasks([...generated, ...tasks]);
+            const existing = new Set(tasks.map((task) => task.text.trim().toLowerCase()));
+            const uniqueGenerated = generated.filter((task) => !existing.has(task.text.trim().toLowerCase()));
+            saveTasks([...uniqueGenerated, ...tasks]);
           }}
         >
           Generate Task Otomatis dari AI
