@@ -1,5 +1,7 @@
 # TNI AU Aircrew SPA (Frontend-only)
 
+> **Judul penyempurnaan:** *Perancangan dan Implementasi Sistem Pengambilan Keputusan Operasional Terintegrasi untuk Aircrew TNI AU Berbasis Indeks Kesiapan, Operational Risk Management (ORM), dan Prioritas Tindakan.*
+
 Aplikasi Single Page App untuk operasional penerbang TNI AU berbasis React + TypeScript + TailwindCSS.
 
 ## Menjalankan
