@@ -16,7 +16,9 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
     state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length +
     state.orm.filter((o) => o.riskLevel === 'High').length +
     state.incidents.filter((i) => i.status === 'New').length +
-    2;
+    state.notams.filter((n) => !n.acknowledged).length;
+
+  const readinessTone = notifCount >= 10 ? 'text-rose-700 bg-rose-100 dark:text-rose-200 dark:bg-rose-900/40' : notifCount >= 5 ? 'text-amber-700 bg-amber-100 dark:text-amber-200 dark:bg-amber-900/40' : 'text-emerald-700 bg-emerald-100 dark:text-emerald-200 dark:bg-emerald-900/40';
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setCurrentTime(new Date()), 30_000);
@@ -70,7 +72,7 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
           <div className="hidden rounded-lg bg-cyan-100 px-2 py-1 text-xs font-semibold text-cyan-700 md:block dark:bg-cyan-900/50 dark:text-cyan-200">
             Hardware Gateway Connected • Semua Modul
           </div>
-          <div className="hidden rounded-lg bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 md:block dark:bg-emerald-900/50 dark:text-emerald-200">Readiness Online</div>
+          <div className={`hidden rounded-lg px-2 py-1 text-xs font-semibold md:block ${readinessTone}`}>Readiness Online</div>
           <div className="rounded-lg bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-900/50 dark:text-rose-200">Alerts: {notifCount}</div>
         </div>
       </div>

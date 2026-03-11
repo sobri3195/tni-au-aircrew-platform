@@ -155,7 +155,7 @@ export const DashboardPage = () => {
                   <p>{item.label}</p>
                   <p className="text-xs text-slate-500">{item.note}</p>
                 </div>
-                  <p className="font-semibold">{item.score}%</p>
+                  <p className="font-semibold">{item.score}% <span className="text-xs font-normal text-slate-500">(bobot {(item.weight * 100).toFixed(0)}%)</span></p>
                 </div>
                 <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700">
                   <div
@@ -196,6 +196,7 @@ export const DashboardPage = () => {
           <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">Composite Risk Index</p>
           <p className="text-2xl font-bold">{aiCopilot.riskIndex}/100</p>
           <div className="mt-3 space-y-2">
+            {aiCopilot.recommendations.length === 0 && <p className="text-sm text-slate-500">Tidak ada rekomendasi kritis saat ini. Pertahankan posture operasi saat ini.</p>}
             {aiCopilot.recommendations.map((item) => (
               <button
                 key={item.label}
