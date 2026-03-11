@@ -18,10 +18,10 @@ export type ReadinessAlert = {
 
 const clamp = (value: number) => Math.max(20, Math.min(100, Math.round(value)));
 
-const profileWeights: Record<MissionProfile, Record<'medical' | 'training' | 'risk' | 'safety' | 'notam', number>> = {
-  Training: { medical: 0.27, training: 0.3, risk: 0.16, safety: 0.14, notam: 0.13 },
-  'Routine Ops': { medical: 0.3, training: 0.25, risk: 0.2, safety: 0.15, notam: 0.1 },
-  'High-Risk Ops': { medical: 0.28, training: 0.24, risk: 0.28, safety: 0.14, notam: 0.06 }
+const profileWeights: Record<MissionProfile, Record<'medical' | 'training' | 'risk' | 'safety' | 'notam' | 'maintenance' | 'fatigue', number>> = {
+  Training: { medical: 0.22, training: 0.26, risk: 0.12, safety: 0.12, notam: 0.1, maintenance: 0.08, fatigue: 0.1 },
+  'Routine Ops': { medical: 0.23, training: 0.2, risk: 0.16, safety: 0.12, notam: 0.08, maintenance: 0.11, fatigue: 0.1 },
+  'High-Risk Ops': { medical: 0.2, training: 0.18, risk: 0.22, safety: 0.12, notam: 0.06, maintenance: 0.12, fatigue: 0.1 }
 };
 
 export const calculateReadinessComponents = (state: AppState): ReadinessComponent[] => {
@@ -46,6 +46,15 @@ export const calculateReadinessComponents = (state: AppState): ReadinessComponen
   const unackedNotam = state.notams.filter((item) => !item.acknowledged).length;
   const notamScore = clamp(100 - unackedNotam * 8);
 
+  const nmcAircraft = state.orm.filter((item) => item.aircraftStatus === 'NMC').length;
+  const pmcAircraft = state.orm.filter((item) => item.aircraftStatus === 'PMC').length;
+  const maintenanceScore = clamp(100 - nmcAircraft * 14 - pmcAircraft * 5);
+
+  const recentSorties = state.logbook.filter((entry) => Date.now() - new Date(entry.date).getTime() <= 1000 * 60 * 60 * 24 * 7);
+  const nightSorties = recentSorties.filter((entry) => entry.dayNight === 'Night').length;
+  const totalHours7d = recentSorties.reduce((sum, entry) => sum + entry.duration, 0);
+  const fatigueScore = clamp(100 - Math.max(0, totalHours7d - 28) * 2.4 - nightSorties * 2.5);
+
   const weights = profileWeights[state.missionProfile];
 
   return [
@@ -53,7 +62,9 @@ export const calculateReadinessComponents = (state: AppState): ReadinessComponen
     { label: 'Training Currency', score: trainingScore, weight: weights.training, note: `${expiringTraining} expiring, ${expiredTraining} expired` },
     { label: 'Operational Risk', score: riskScore, weight: weights.risk, note: `${highRiskOrm} high risk mission profile` },
     { label: 'Safety Posture', score: safetyScore, weight: weights.safety, note: `${openIncidents} incident awaiting triage` },
-    { label: 'NOTAM Compliance', score: notamScore, weight: weights.notam, note: `${unackedNotam} NOTAM not acknowledged` }
+    { label: 'NOTAM Compliance', score: notamScore, weight: weights.notam, note: `${unackedNotam} NOTAM not acknowledged` },
+    { label: 'Maintenance Availability', score: maintenanceScore, weight: weights.maintenance, note: `${nmcAircraft} NMC, ${pmcAircraft} PMC snapshot` },
+    { label: 'Fatigue Exposure', score: fatigueScore, weight: weights.fatigue, note: `${totalHours7d.toFixed(1)} jam/7 hari, ${nightSorties} night sortie` }
   ];
 };
 
@@ -69,6 +80,9 @@ export const calculateReadinessAlerts = (state: AppState): ReadinessAlert[] => {
   const openIncidents = state.incidents.filter((item) => item.status === 'New').length;
   const unackedNotam = state.notams.filter((item) => !item.acknowledged).length;
   const limitedCrew = state.profiles.filter((pilot) => pilot.status !== 'Active').length;
+  const nmcAircraft = state.orm.filter((item) => item.aircraftStatus === 'NMC').length;
+  const recentSorties = state.logbook.filter((entry) => Date.now() - new Date(entry.date).getTime() <= 1000 * 60 * 60 * 24 * 7);
+  const totalHours7d = recentSorties.reduce((sum, entry) => sum + entry.duration, 0);
 
   const alerts: ReadinessAlert[] = [
     {
@@ -105,6 +119,20 @@ export const calculateReadinessAlerts = (state: AppState): ReadinessAlert[] => {
       message: `${unackedNotam} NOTAM still pending acknowledgement before next sortie`,
       route: '/notam',
       value: unackedNotam
+    },
+    {
+      id: 'alert-maintenance-nmc',
+      severity: nmcAircraft >= 2 ? 'critical' : 'warning',
+      message: `${nmcAircraft} aircraft berstatus NMC, evaluasi ulang tasking sortie`,
+      route: '/maintenance',
+      value: nmcAircraft
+    },
+    {
+      id: 'alert-fatigue-hours',
+      severity: totalHours7d > 34 ? 'critical' : 'warning',
+      message: `Beban terbang 7 hari mencapai ${totalHours7d.toFixed(1)} jam, cek fatigue crew`,
+      route: '/fatigue',
+      value: totalHours7d > 28 ? 1 : 0
     }
   ];
 
