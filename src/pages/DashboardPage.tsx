@@ -46,6 +46,14 @@ export const DashboardPage = () => {
   const readinessAlerts = useMemo(() => calculateReadinessAlerts(state), [state]);
 
   const pendingIncident = state.incidents.filter((i) => i.status === 'New').length;
+  const restViolations = state.orm.filter((item) => item.crewRestHours < 8).length;
+  const upcomingSorties24h = state.schedule.filter(
+    (item) => item.category === 'Sortie' && new Date(item.start).getTime() - Date.now() <= 1000 * 60 * 60 * 24 && new Date(item.start).getTime() >= Date.now()
+  ).length;
+  const upcomingAgenda = [...state.schedule]
+    .filter((item) => new Date(item.start).getTime() >= Date.now())
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+    .slice(0, 4);
   const urgencyList = readinessAlerts.map((alert) => ({
     id: alert.id,
     label: alert.message,
@@ -126,6 +134,20 @@ export const DashboardPage = () => {
           <div className={`rounded-xl px-4 py-3 ${missionState.style}`}>
             <p className="text-xs font-semibold uppercase">Mission State</p>
             <p className="text-2xl font-bold">{missionState.label}</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <div className="rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm">
+            <p className="text-xs uppercase tracking-wide text-cyan-100">Upcoming Sortie (24h)</p>
+            <p className="mt-1 text-2xl font-bold">{upcomingSorties24h}</p>
+          </div>
+          <div className="rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm">
+            <p className="text-xs uppercase tracking-wide text-cyan-100">Open Incidents</p>
+            <p className="mt-1 text-2xl font-bold">{pendingIncident}</p>
+          </div>
+          <div className="rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm">
+            <p className="text-xs uppercase tracking-wide text-cyan-100">Crew Rest Violations</p>
+            <p className="mt-1 text-2xl font-bold">{restViolations}</p>
           </div>
         </div>
       </div>
@@ -213,7 +235,7 @@ export const DashboardPage = () => {
           <h3 className="mb-2 font-semibold">Rule-based Alerts & Early Warning</h3>
           <ul className="list-disc space-y-1 pl-5 text-sm">
             <li>Training expiry &lt;30 hari: {state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length}</li>
-            <li>Rest violation: 2 (mock)</li>
+            <li>Rest violation (&lt;8 jam): {restViolations}</li>
             <li>ORM High Risk: {state.orm.filter((o) => o.riskLevel === 'High').length}</li>
             <li>Incident pending review: {pendingIncident}</li>
             <li>Prediksi overload sortie minggu ini: {state.schedule.filter((item) => item.category === 'Sortie').length > 9 ? 'High' : 'Normal'}</li>
@@ -280,6 +302,31 @@ export const DashboardPage = () => {
               </p>
             ))}
           </div>
+        </div>
+
+        <div className="card md:col-span-2">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-semibold">Agenda Operasi Selanjutnya</h3>
+            <button onClick={() => navigate('/schedule')} className="text-sm text-sky-600 hover:text-sky-700">Buka Planner →</button>
+          </div>
+          {upcomingAgenda.length === 0 ? (
+            <p className="text-sm text-slate-500">Belum ada agenda mendatang dalam jadwal.</p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {upcomingAgenda.map((item) => (
+                <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">{item.title}</p>
+                      <p className="text-xs text-slate-500">{new Date(item.start).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                    </div>
+                    <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">{item.category}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">Base: {item.base}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>
