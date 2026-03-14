@@ -34,12 +34,12 @@ export const AppShell = () => {
 
   return (
     <div className="relative flex min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <Sidebar />
       </div>
 
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 flex md:hidden">
+        <div className="fixed inset-0 z-40 flex lg:hidden">
           <button className="absolute inset-0 bg-slate-900/50" onClick={() => setMobileMenuOpen(false)} aria-label="Tutup menu" />
           <div className="relative z-10 h-full">
             <Sidebar mobile onNavigate={() => setMobileMenuOpen(false)} />
@@ -49,7 +49,7 @@ export const AppShell = () => {
 
       <main className="flex-1 min-w-0">
         <Topbar onMenuToggle={() => setMobileMenuOpen(true)} />
-        <div className="mx-auto w-full max-w-[1400px] p-3 md:p-4 lg:p-5">
+        <div className="mx-auto w-full max-w-[1400px] p-3 sm:p-4 lg:p-5">
           <section className="mb-4 rounded-xl border border-sky-200 bg-sky-50/90 p-3 text-sm text-sky-900 shadow-sm dark:border-sky-800/70 dark:bg-sky-950/40 dark:text-sky-100">
             <p className="font-semibold">Mode Frontend (Tanpa Backend)</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-xs sm:text-sm">

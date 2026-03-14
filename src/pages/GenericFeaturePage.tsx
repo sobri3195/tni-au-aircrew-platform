@@ -462,8 +462,8 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-semibold">CRUD {schema.entityName}</h3>
             <div className="flex flex-wrap items-center gap-2">
-              <input className="input w-40" placeholder="Search" value={search} onChange={(event) => setSearch(event.target.value)} />
-              <select className="input w-40" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <input className="input w-full sm:w-40" placeholder="Search" value={search} onChange={(event) => setSearch(event.target.value)} />
+              <select className="input w-full sm:w-40" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                 <option value="all">All Status</option>
                 {(schema.statuses ?? []).map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
