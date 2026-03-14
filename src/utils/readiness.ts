@@ -24,6 +24,16 @@ const profileWeights: Record<MissionProfile, Record<'medical' | 'training' | 'ri
   'High-Risk Ops': { medical: 0.2, training: 0.18, risk: 0.22, safety: 0.12, notam: 0.06, maintenance: 0.12, fatigue: 0.1 }
 };
 
+const defaultMissionProfile: MissionProfile = 'Training';
+
+const getMissionProfileWeights = (missionProfile: unknown) => {
+  if (typeof missionProfile === 'string' && missionProfile in profileWeights) {
+    return profileWeights[missionProfile as MissionProfile];
+  }
+
+  return profileWeights[defaultMissionProfile];
+};
+
 export const calculateReadinessComponents = (state: AppState): ReadinessComponent[] => {
   const profileCount = Math.max(state.profiles.length, 1);
   const activeCrew = state.profiles.filter((pilot) => pilot.status === 'Active').length;
@@ -55,7 +65,7 @@ export const calculateReadinessComponents = (state: AppState): ReadinessComponen
   const totalHours7d = recentSorties.reduce((sum, entry) => sum + entry.duration, 0);
   const fatigueScore = clamp(100 - Math.max(0, totalHours7d - 28) * 2.4 - nightSorties * 2.5);
 
-  const weights = profileWeights[state.missionProfile];
+  const weights = getMissionProfileWeights(state.missionProfile);
 
   return [
     { label: 'Medical Readiness', score: medicalScore, weight: weights.medical, note: `${activeCrew}/${profileCount} aircrew fit for duty` },
