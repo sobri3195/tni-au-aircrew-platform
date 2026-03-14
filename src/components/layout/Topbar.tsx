@@ -39,15 +39,15 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/85 p-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/85">
-      <div className="flex flex-wrap items-center gap-2 md:gap-3">
-        <button className="btn md:hidden" onClick={onMenuToggle} aria-label="Buka menu navigasi">
+      <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+        <button className="btn lg:hidden" onClick={onMenuToggle} aria-label="Buka menu navigasi">
           ☰ Menu
         </button>
 
-        <div className="order-3 w-full md:order-none md:w-auto md:flex-1">
+        <div className="order-3 w-full lg:order-none lg:w-auto lg:flex-1">
           <input
             id="global-search-input"
-            className="input md:max-w-md"
+            className="input lg:max-w-md"
             value={state.globalSearch}
             onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
             placeholder="Global Search (Ctrl/Cmd+K)"
@@ -58,7 +58,7 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
           {localTime}
         </div>
 
-        <select className="input w-full sm:w-52 md:w-48" value={state.role} onChange={(e) => dispatch({ type: 'SET_ROLE', payload: e.target.value as Role })}>
+        <select className="input w-full sm:w-52 lg:w-48" value={state.role} onChange={(e) => dispatch({ type: 'SET_ROLE', payload: e.target.value as Role })}>
           {roles.map((role) => (
             <option key={role}>{role}</option>
           ))}
@@ -69,10 +69,10 @@ export const Topbar = ({ onMenuToggle }: TopbarProps) => {
         </button>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="hidden rounded-lg bg-cyan-100 px-2 py-1 text-xs font-semibold text-cyan-700 md:block dark:bg-cyan-900/50 dark:text-cyan-200">
+          <div className="hidden rounded-lg bg-cyan-100 px-2 py-1 text-xs font-semibold text-cyan-700 lg:block dark:bg-cyan-900/50 dark:text-cyan-200">
             Hardware Gateway Connected • Semua Modul
           </div>
-          <div className={`hidden rounded-lg px-2 py-1 text-xs font-semibold md:block ${readinessTone}`}>Readiness Online</div>
+          <div className={`hidden rounded-lg px-2 py-1 text-xs font-semibold lg:block ${readinessTone}`}>Readiness Online</div>
           <div className="rounded-lg bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-900/50 dark:text-rose-200">Alerts: {notifCount}</div>
         </div>
       </div>

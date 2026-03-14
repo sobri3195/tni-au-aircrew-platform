@@ -183,7 +183,7 @@ export const Sidebar = ({ mobile = false, onNavigate }: SidebarProps) => {
 
   return (
     <aside
-      className={`h-full overflow-y-auto border-r border-slate-200/80 bg-white/95 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 ${mobile ? 'w-80 max-w-[85vw]' : 'w-72'}`}
+      className={`h-full overflow-y-auto border-r border-slate-200/80 bg-white/95 p-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 ${mobile ? 'w-[85vw] max-w-80 sm:max-w-sm' : 'w-72'}`}
     >
       <div className="mb-4 rounded-xl border border-sky-100 bg-gradient-to-r from-sky-50 to-cyan-50 p-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900">
         <div className="flex items-center gap-3">
