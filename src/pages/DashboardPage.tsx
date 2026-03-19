@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import type { MissionProfile } from '../types';
@@ -7,6 +7,7 @@ import { calculateReadinessAlerts, calculateReadinessComponents } from '../utils
 import { Badge } from '../components/ui/Badge';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { initialRikkesRecords, calculateRikkesSummary } from '../data/rikkesData';
+import { Modal } from '../components/ui/Modal';
 
 const Card = ({ label, value, hint }: { label: string; value: string | number; hint?: string }) => (
   <div className="card border-slate-200/80 bg-white/90 backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
@@ -16,16 +17,117 @@ const Card = ({ label, value, hint }: { label: string; value: string | number; h
   </div>
 );
 
+type ReadinessOverride = {
+  id: string;
+  targetType: 'Crew' | 'Mission';
+  targetLabel: string;
+  decision: 'No-Go' | 'Conditional Go' | 'Exceptional Go';
+  reason: string;
+  mitigation: string;
+  createdAt: string;
+  expiresAt: string;
+  role: string;
+};
+
+type PredictiveAlert = {
+  id: string;
+  crewId: string;
+  crewName: string;
+  score: number;
+  tier: 'Normal' | 'Monitor' | 'FSO Review' | 'Command Attention';
+  reasons: string[];
+  actions: string[];
+};
+
 const statusTone = (score: number) => {
   if (score >= 80) return { label: 'GREEN', tone: 'green' as const, style: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' };
   if (score >= 60) return { label: 'AMBER', tone: 'yellow' as const, style: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' };
   return { label: 'RED', tone: 'red' as const, style: 'bg-rose-500/15 text-rose-700 dark:text-rose-300' };
 };
 
+const getPilotReadiness = (pilotId: string, state: ReturnType<typeof useApp>['state']) => {
+  const pilot = state.profiles.find((profile) => profile.id === pilotId);
+  if (!pilot) {
+    return {
+      score: 20,
+      tone: 'red' as const,
+      breakdown: [{ label: 'Data quality', value: 20, note: 'Profil aircrew tidak ditemukan.' }]
+    };
+  }
+
+  const pilotTrainings = state.trainings.filter((item) => item.pilotId === pilotId);
+  const recentFlights = state.logbook.filter((item) => item.pilotId === pilotId && Date.now() - new Date(item.date).getTime() <= 1000 * 60 * 60 * 24 * 30);
+  const hours7d = state.logbook
+    .filter((item) => item.pilotId === pilotId && Date.now() - new Date(item.date).getTime() <= 1000 * 60 * 60 * 24 * 7)
+    .reduce((sum, item) => sum + item.duration, 0);
+  const expiredTrainings = pilotTrainings.filter((item) => daysUntil(item.expiryDate) <= 0).length;
+  const expiringTrainings = pilotTrainings.filter((item) => daysUntil(item.expiryDate) > 0 && daysUntil(item.expiryDate) < 30).length;
+  const medical = pilot.status === 'Active' ? 96 : pilot.status === 'Limited' ? 62 : 25;
+  const training = Math.max(25, 100 - expiredTrainings * 28 - expiringTrainings * 10);
+  const fatigue = Math.max(30, 100 - Math.max(0, hours7d - 18) * 3.2 - recentFlights.filter((flight) => flight.dayNight === 'Night').length * 4);
+  const qualification = Math.max(35, 100 - Math.max(0, 14 - recentFlights.length) * 3 - (daysUntil(pilot.ifrCurrencyUntil) < 14 ? 12 : 0) - (daysUntil(pilot.nvgCurrencyUntil) < 14 ? 12 : 0));
+  const score = Math.round(medical * 0.3 + training * 0.28 + fatigue * 0.2 + qualification * 0.22);
+
+  return {
+    score,
+    tone: score >= 80 ? 'green' as const : score >= 60 ? 'yellow' as const : 'red' as const,
+    breakdown: [
+      { label: 'Medical', value: medical, note: `Status ${pilot.status}` },
+      { label: 'Training', value: training, note: `${expiredTrainings} expired • ${expiringTrainings} expiring` },
+      { label: 'Fatigue', value: fatigue, note: `${hours7d.toFixed(1)} jam / 7 hari` },
+      { label: 'Qualification', value: qualification, note: `${recentFlights.length} sortie / 30 hari` }
+    ]
+  };
+};
+
+const buildPredictiveAlerts = (state: ReturnType<typeof useApp>['state']): PredictiveAlert[] =>
+  state.profiles.map((pilot) => {
+    const pilotFlights7d = state.logbook.filter((item) => item.pilotId === pilot.id && Date.now() - new Date(item.date).getTime() <= 1000 * 60 * 60 * 24 * 7);
+    const flightHours7d = pilotFlights7d.reduce((sum, item) => sum + item.duration, 0);
+    const fatigueSignals = flightHours7d > 18 ? 25 : 0;
+    const trainingSignals = state.trainings.filter((item) => item.pilotId === pilot.id && daysUntil(item.expiryDate) < 30).length * 12;
+    const notamSignals = state.notams.filter((item) => !item.acknowledged).length > 4 ? 20 : 0;
+    const ormSignals = state.orm.filter((item) => item.riskLevel === 'High').length >= 2 ? 30 : 0;
+    const combinedEscalation = [fatigueSignals, trainingSignals, notamSignals, ormSignals].filter((item) => item > 0).length >= 2 ? 15 : 0;
+    const score = Math.min(100, fatigueSignals + trainingSignals + notamSignals + ormSignals + combinedEscalation + (pilot.status !== 'Active' ? 10 : 0));
+    const reasons = [
+      fatigueSignals > 0 ? `Tempo tinggi ${flightHours7d.toFixed(1)} jam/7 hari` : null,
+      trainingSignals > 0 ? 'Currency item mendekati/masuk expiry window' : null,
+      notamSignals > 0 ? 'NOTAM exposure tinggi dengan ack backlog' : null,
+      ormSignals > 0 ? 'Riwayat ORM high-risk berulang' : null,
+      combinedEscalation > 0 ? 'Multi-factor escalation aktif' : null,
+      pilot.status !== 'Active' ? `Status ${pilot.status}` : null
+    ].filter(Boolean) as string[];
+    const tier: PredictiveAlert['tier'] = score >= 70 ? 'Command Attention' : score >= 50 ? 'FSO Review' : score >= 30 ? 'Monitor' : 'Normal';
+    const actions = [
+      fatigueSignals > 0 ? 'Pertimbangkan mandatory rest 12h.' : null,
+      trainingSignals > 0 ? 'Kunci slot recurrent training minggu ini.' : null,
+      notamSignals > 0 ? 'Lakukan focused NOTAM briefing.' : null,
+      ormSignals > 0 ? 'Lengkapi mitigasi ORM sebelum sortie release.' : null
+    ].filter(Boolean) as string[];
+
+    return {
+      id: `PSE-${pilot.id}`,
+      crewId: pilot.id,
+      crewName: pilot.name,
+      score,
+      tier,
+      reasons: reasons.length ? reasons : ['Tidak ada sinyal early warning kritikal.'],
+      actions: actions.length ? actions : ['Monitor normal.']
+    };
+  }).sort((a, b) => b.score - a.score);
+
 export const DashboardPage = () => {
   const navigate = useNavigate();
   const { state, readinessScore, dispatch } = useApp();
   const [rikkesRecords] = useLocalStorageState('aircrew-rikkes-data-v1', initialRikkesRecords);
+  const [overrides, setOverrides] = useLocalStorageState<ReadinessOverride[]>('readiness-overrides-v1', []);
+  const [acknowledgedSafetyAlerts, setAcknowledgedSafetyAlerts] = useLocalStorageState<string[]>('predictive-safety-ack-v1', []);
+  const [overrideTarget, setOverrideTarget] = useState(state.profiles[0]?.id ?? 'P001');
+  const [overrideDecision, setOverrideDecision] = useState<ReadinessOverride['decision']>('Conditional Go');
+  const [overrideReason, setOverrideReason] = useState('');
+  const [overrideMitigation, setOverrideMitigation] = useState('');
+  const [selectedPilotId, setSelectedPilotId] = useState<string | null>(state.profiles[0]?.id ?? null);
   const missionProfiles: MissionProfile[] = ['Training', 'Routine Ops', 'High-Risk Ops'];
   const rikkesSummary = useMemo(() => calculateRikkesSummary(rikkesRecords), [rikkesRecords]);
 
@@ -42,18 +144,17 @@ export const DashboardPage = () => {
   }, [state.logbook, state.profiles]);
 
   const readinessBreakdown = useMemo(() => calculateReadinessComponents(state), [state]);
-
   const readinessAlerts = useMemo(() => calculateReadinessAlerts(state), [state]);
+  const predictiveAlerts = useMemo(() => buildPredictiveAlerts(state), [state]);
+  const activePredictiveAlerts = predictiveAlerts.filter((alert) => alert.tier !== 'Normal' && !acknowledgedSafetyAlerts.includes(alert.id));
+  const selectedPilot = state.profiles.find((pilot) => pilot.id === selectedPilotId);
+  const selectedPilotReadiness = useMemo(() => (selectedPilotId ? getPilotReadiness(selectedPilotId, state) : null), [selectedPilotId, state]);
 
   const pendingIncident = state.incidents.filter((i) => i.status === 'New').length;
   const restViolations = state.orm.filter((item) => item.crewRestHours < 8).length;
   const upcomingSorties24h = state.schedule.filter(
     (item) => item.category === 'Sortie' && new Date(item.start).getTime() - Date.now() <= 1000 * 60 * 60 * 24 && new Date(item.start).getTime() >= Date.now()
   ).length;
-  const upcomingAgenda = [...state.schedule]
-    .filter((item) => new Date(item.start).getTime() >= Date.now())
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-    .slice(0, 4);
   const urgencyList = readinessAlerts.map((alert) => ({
     id: alert.id,
     label: alert.message,
@@ -115,7 +216,7 @@ export const DashboardPage = () => {
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-cyan-100">Command Center</p>
             <h2 className="mt-1 text-2xl font-bold md:text-3xl">Dashboard Readiness</h2>
-            <p className="mt-2 max-w-2xl text-sm text-cyan-50">Ringkasan kesiapan misi lintas personel, risiko, dan status armada.</p>
+            <p className="mt-2 max-w-2xl text-sm text-cyan-50">Ringkasan kesiapan misi lintas personel, risiko, status armada, dan early warning safety.</p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
               <span className="text-cyan-100">Mission Profile:</span>
               <div className="flex items-center gap-2">
@@ -136,7 +237,7 @@ export const DashboardPage = () => {
             <p className="text-2xl font-bold">{missionState.label}</p>
           </div>
         </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
           <div className="rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm">
             <p className="text-xs uppercase tracking-wide text-cyan-100">Upcoming Sortie (24h)</p>
             <p className="mt-1 text-2xl font-bold">{upcomingSorties24h}</p>
@@ -148,6 +249,10 @@ export const DashboardPage = () => {
           <div className="rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm">
             <p className="text-xs uppercase tracking-wide text-cyan-100">Crew Rest Violations</p>
             <p className="mt-1 text-2xl font-bold">{restViolations}</p>
+          </div>
+          <div className="rounded-xl border border-white/20 bg-white/10 p-3 backdrop-blur-sm">
+            <p className="text-xs uppercase tracking-wide text-cyan-100">Predictive Alerts</p>
+            <p className="mt-1 text-2xl font-bold">{activePredictiveAlerts.length}</p>
           </div>
         </div>
       </div>
@@ -164,7 +269,7 @@ export const DashboardPage = () => {
         <div className="card lg:col-span-2">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm text-slate-500">Unified Readiness Score</p>
+              <p className="text-sm text-slate-500">Unified Readiness Snapshot</p>
               <p className="text-3xl font-bold">{readinessScore}/100</p>
             </div>
             <Badge label={readinessScore > 75 ? 'MISSION READY' : readinessScore > 55 ? 'CAUTION' : 'LIMITED'} tone={missionState.tone} />
@@ -174,9 +279,9 @@ export const DashboardPage = () => {
               <div key={item.label}>
                 <div className="mb-1 flex items-center justify-between text-sm">
                   <div>
-                  <p>{item.label}</p>
-                  <p className="text-xs text-slate-500">{item.note}</p>
-                </div>
+                    <p>{item.label}</p>
+                    <p className="text-xs text-slate-500">{item.note}</p>
+                  </div>
                   <p className="font-semibold">{item.score}% <span className="text-xs font-normal text-slate-500">(bobot {(item.weight * 100).toFixed(0)}%)</span></p>
                 </div>
                 <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700">
@@ -208,6 +313,91 @@ export const DashboardPage = () => {
         </div>
       </div>
 
+      <div className="grid gap-3 xl:grid-cols-[1.1fr_1fr]">
+        <div className="card">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div>
+              <h3 className="font-semibold">Readiness Drill-Down</h3>
+              <p className="text-sm text-slate-500">Skor individual untuk mendukung command override dan re-assignment.</p>
+            </div>
+            <button className="btn" onClick={() => navigate('/schedule')}>Buka planner</button>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            {state.profiles.map((pilot) => {
+              const pilotReadiness = getPilotReadiness(pilot.id, state);
+              return (
+                <button key={pilot.id} className="rounded-xl border border-slate-200 p-3 text-left transition hover:border-sky-500 dark:border-slate-700" onClick={() => setSelectedPilotId(pilot.id)}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">{pilot.name}</p>
+                      <p className="text-xs text-slate-500">{pilot.aircraftType} • {pilot.status}</p>
+                    </div>
+                    <Badge label={`${pilotReadiness.score}/100`} tone={pilotReadiness.tone} />
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">{pilotReadiness.breakdown[1]?.note}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="card space-y-3">
+          <div>
+            <h3 className="font-semibold">Command Override Desk</h3>
+            <p className="text-sm text-slate-500">No-Go, Conditional Go, atau Exceptional Go dengan alasan dan mitigasi wajib.</p>
+          </div>
+          <select className="input" value={overrideTarget} onChange={(event) => setOverrideTarget(event.target.value)}>
+            {state.profiles.map((pilot) => (
+              <option key={pilot.id} value={pilot.id}>{pilot.name}</option>
+            ))}
+          </select>
+          <select className="input" value={overrideDecision} onChange={(event) => setOverrideDecision(event.target.value as ReadinessOverride['decision'])}>
+            <option value="Conditional Go">Conditional Go</option>
+            <option value="No-Go">No-Go</option>
+            <option value="Exceptional Go">Exceptional Go</option>
+          </select>
+          <textarea className="input" placeholder="Alasan override" value={overrideReason} onChange={(event) => setOverrideReason(event.target.value)} />
+          <textarea className="input" placeholder="Mitigasi / guardrail" value={overrideMitigation} onChange={(event) => setOverrideMitigation(event.target.value)} />
+          <button
+            className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!overrideReason.trim() || !overrideMitigation.trim()}
+            onClick={() => {
+              const pilot = state.profiles.find((item) => item.id === overrideTarget);
+              if (!pilot || !overrideReason.trim() || !overrideMitigation.trim()) return;
+              const override: ReadinessOverride = {
+                id: `OVR-${overrides.length + 1}`,
+                targetType: 'Crew',
+                targetLabel: pilot.name,
+                decision: overrideDecision,
+                reason: overrideReason,
+                mitigation: overrideMitigation,
+                createdAt: new Date().toISOString(),
+                expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 12).toISOString(),
+                role: state.role
+              };
+              setOverrides((current) => [override, ...current]);
+              dispatch({ type: 'ADD_AUDIT', payload: { action: 'UPDATE', entity: 'CommandOverride', detail: `${override.targetLabel}:${override.decision}`, role: state.role } });
+              setOverrideReason('');
+              setOverrideMitigation('');
+            }}
+          >
+            Simpan Override
+          </button>
+          <div className="space-y-2">
+            {overrides.slice(0, 3).map((override) => (
+              <div key={override.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold">{override.targetLabel}</p>
+                  <Badge label={override.decision} tone={override.decision === 'Exceptional Go' ? 'red' : override.decision === 'Conditional Go' ? 'yellow' : 'slate'} />
+                </div>
+                <p className="mt-1 text-xs text-slate-500">Berlaku sampai {new Date(override.expiresAt).toLocaleString('id-ID')}</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{override.reason}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-3 md:grid-cols-2">
         <div className="card">
           <div className="mb-2 flex items-center justify-between">
@@ -232,14 +422,30 @@ export const DashboardPage = () => {
           </div>
         </div>
         <div className="card">
-          <h3 className="mb-2 font-semibold">Rule-based Alerts & Early Warning</h3>
-          <ul className="list-disc space-y-1 pl-5 text-sm">
-            <li>Training expiry &lt;30 hari: {state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length}</li>
-            <li>Rest violation (&lt;8 jam): {restViolations}</li>
-            <li>ORM High Risk: {state.orm.filter((o) => o.riskLevel === 'High').length}</li>
-            <li>Incident pending review: {pendingIncident}</li>
-            <li>Prediksi overload sortie minggu ini: {state.schedule.filter((item) => item.category === 'Sortie').length > 9 ? 'High' : 'Normal'}</li>
-          </ul>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="font-semibold">Predictive Safety Engine</h3>
+            <Badge label={`${activePredictiveAlerts.length} aktif`} tone={activePredictiveAlerts.length > 0 ? 'red' : 'green'} />
+          </div>
+          <div className="space-y-2">
+            {predictiveAlerts.slice(0, 4).map((alert) => (
+              <div key={alert.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{alert.crewName}</p>
+                    <p className="text-xs text-slate-500">{alert.tier}</p>
+                  </div>
+                  <Badge label={`${alert.score}/100`} tone={alert.score >= 70 ? 'red' : alert.score >= 50 ? 'yellow' : alert.score >= 30 ? 'blue' : 'green'} />
+                </div>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600 dark:text-slate-300">
+                  {alert.reasons.slice(0, 2).map((reason) => <li key={reason}>{reason}</li>)}
+                </ul>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className="btn" onClick={() => setAcknowledgedSafetyAlerts((current) => [...new Set([...current, alert.id])])}>Acknowledge</button>
+                  <button className="btn" onClick={() => navigate('/mission-intake-hub')}>Assign Action</button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="card">
           <div className="mb-3 flex items-center justify-between">
@@ -247,88 +453,65 @@ export const DashboardPage = () => {
             <button onClick={() => navigate('/rikkes')} className="text-sm text-sky-600 hover:text-sky-700">Lihat Detail →</button>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
+            <div className="rounded-lg bg-emerald-50 p-3 text-center dark:bg-emerald-900/20">
               <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{rikkesSummary.fitToFly}</p>
               <p className="text-xs text-emerald-700 dark:text-emerald-300">Fit to Fly</p>
             </div>
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-3 text-center">
+            <div className="rounded-lg bg-amber-50 p-3 text-center dark:bg-amber-900/20">
               <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{rikkesSummary.fitWithRestriction}</p>
               <p className="text-xs text-amber-700 dark:text-amber-300">With Restriction</p>
             </div>
-            <div className="rounded-lg bg-rose-50 dark:bg-rose-900/20 p-3 text-center">
+            <div className="rounded-lg bg-rose-50 p-3 text-center dark:bg-rose-900/20">
               <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{rikkesSummary.unfit}</p>
               <p className="text-xs text-rose-700 dark:text-rose-300">Unfit</p>
             </div>
-            <div className="rounded-lg bg-sky-50 dark:bg-sky-900/20 p-3 text-center">
+            <div className="rounded-lg bg-sky-50 p-3 text-center dark:bg-sky-900/20">
               <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">{rikkesSummary.expiringSoon}</p>
-              <p className="text-xs text-sky-700 dark:text-sky-300">Expiring Soon</p>
-            </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-xs text-slate-500 mb-1">Distribusi Kategori Kesehatan</p>
-            <div className="flex h-2 rounded-full overflow-hidden">
-              {(['A', 'B', 'C', 'D', 'E'] as const).map((kategori) => {
-                const count = rikkesSummary[`kategori${kategori}` as keyof typeof rikkesSummary] as number;
-                const total = rikkesSummary.totalPemeriksaan || 1;
-                const width = (count / total) * 100;
-                const colors = {
-                  A: 'bg-emerald-500',
-                  B: 'bg-sky-500',
-                  C: 'bg-amber-500',
-                  D: 'bg-orange-500',
-                  E: 'bg-rose-500'
-                };
-                return width > 0 ? (
-                  <div key={kategori} className={colors[kategori]} style={{ width: `${width}%` }} title={`Kategori ${kategori}: ${count}`} />
-                ) : null;
-              })}
-            </div>
-            <div className="flex justify-between text-xs text-slate-400 mt-1">
-              <span>Kat A</span>
-              <span>Kat B</span>
-              <span>Kat C</span>
-              <span>Kat D</span>
-              <span>Kat E</span>
+              <p className="text-xs text-sky-700 dark:text-sky-300">Due Soon</p>
             </div>
           </div>
         </div>
-
         <div className="card">
-          <h3 className="mb-2 font-semibold">Audit Log Terbaru</h3>
-          <div className="space-y-1">
-            {state.auditLogs.slice(0, 5).map((log) => (
-              <p className="text-sm" key={log.id}>
-                {log.timestamp.slice(0, 16)} - [{log.action}] {log.entity}: {log.detail}
-              </p>
-            ))}
-          </div>
+          <h3 className="mb-2 font-semibold">Rule-based Alerts & Early Warning</h3>
+          <ul className="list-disc space-y-1 pl-5 text-sm">
+            <li>Training expiry &lt;30 hari: {state.trainings.filter((t) => daysUntil(t.expiryDate) < 30).length}</li>
+            <li>Rest violation (&lt;8 jam): {restViolations}</li>
+            <li>ORM High Risk: {state.orm.filter((o) => o.riskLevel === 'High').length}</li>
+            <li>Incident pending review: {pendingIncident}</li>
+            <li>Predictive safety active: {activePredictiveAlerts.length}</li>
+          </ul>
         </div>
+      </div>
 
-        <div className="card md:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-semibold">Agenda Operasi Selanjutnya</h3>
-            <button onClick={() => navigate('/schedule')} className="text-sm text-sky-600 hover:text-sky-700">Buka Planner →</button>
-          </div>
-          {upcomingAgenda.length === 0 ? (
-            <p className="text-sm text-slate-500">Belum ada agenda mendatang dalam jadwal.</p>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {upcomingAgenda.map((item) => (
-                <div key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold">{item.title}</p>
-                      <p className="text-xs text-slate-500">{new Date(item.start).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                    </div>
-                    <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">{item.category}</span>
+      <Modal open={Boolean(selectedPilot && selectedPilotReadiness)} title={selectedPilot ? `Readiness Drill-Down — ${selectedPilot.name}` : 'Readiness Drill-Down'} onClose={() => setSelectedPilotId(null)}>
+        {selectedPilot && selectedPilotReadiness && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Skor personal readiness</p>
+                <p className="text-3xl font-bold">{selectedPilotReadiness.score}/100</p>
+              </div>
+              <Badge label={selectedPilot.status} tone={selectedPilot.status === 'Active' ? 'green' : selectedPilot.status === 'Limited' ? 'yellow' : 'red'} />
+            </div>
+            <div className="space-y-2">
+              {selectedPilotReadiness.breakdown.map((item) => (
+                <div key={item.label} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold">{item.label}</p>
+                    <span className="text-sm font-semibold">{item.value}</span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">Base: {item.base}</p>
+                  <p className="text-xs text-slate-500">{item.note}</p>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      </div>
+            <div className="flex flex-wrap gap-2">
+              <button className="btn" onClick={() => navigate('/schedule')}>Reassign Crew</button>
+              <button className="btn" onClick={() => navigate('/training')}>Request Training</button>
+              <button className="btn" onClick={() => navigate('/medical')}>Medical Review</button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </section>
   );
 };
