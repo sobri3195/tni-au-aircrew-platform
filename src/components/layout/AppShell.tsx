@@ -1,29 +1,33 @@
-import { Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
-import { useLocalStorageState } from '../../hooks/useLocalStorageState';
-import { Sidebar } from './Sidebar';
-import { Topbar } from './Topbar';
-import { useApp } from '../../contexts/AppContext';
+import { Outlet, useNavigate, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocalStorageState } from "../../hooks/useLocalStorageState";
+import { Sidebar } from "./Sidebar";
+import { Topbar } from "./Topbar";
+import { useApp } from "../../contexts/AppContext";
+import { CommandPalette } from "./CommandPalette";
 
 export const AppShell = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { state } = useApp();
-  const [mobileMenuOpen, setMobileMenuOpen] = useLocalStorageState('app-mobile-menu-open', false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useLocalStorageState(
+    "app-mobile-menu-open",
+    false,
+  );
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        const input = document.getElementById('global-search-input') as HTMLInputElement | null;
-        input?.focus();
+        setCommandPaletteOpen((current) => !current);
       }
-      if (event.altKey && event.key === '1') navigate('/');
-      if (event.altKey && event.key === '2') navigate('/logbook');
-      if (event.altKey && event.key === '3') navigate('/orm');
+      if (event.altKey && event.key === "1") navigate("/");
+      if (event.altKey && event.key === "2") navigate("/logbook");
+      if (event.altKey && event.key === "3") navigate("/orm");
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [navigate]);
 
   useEffect(() => {
@@ -40,7 +44,11 @@ export const AppShell = () => {
 
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 flex lg:hidden">
-          <button className="absolute inset-0 bg-slate-900/50" onClick={() => setMobileMenuOpen(false)} aria-label="Tutup menu" />
+          <button
+            className="absolute inset-0 bg-slate-900/50"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Tutup menu"
+          />
           <div className="relative z-10 h-full">
             <Sidebar mobile onNavigate={() => setMobileMenuOpen(false)} />
           </div>
@@ -48,7 +56,14 @@ export const AppShell = () => {
       )}
 
       <main className="flex-1 min-w-0">
-        <Topbar onMenuToggle={() => setMobileMenuOpen(true)} />
+        <Topbar
+          onMenuToggle={() => setMobileMenuOpen(true)}
+          onCommandPaletteOpen={() => setCommandPaletteOpen(true)}
+        />
+        <CommandPalette
+          open={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+        />
         <div className="mx-auto w-full max-w-[1400px] p-3 sm:p-4 lg:p-5">
           <Outlet />
         </div>
