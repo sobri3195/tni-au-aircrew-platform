@@ -10,6 +10,15 @@ export type FeatureModule = {
 export const requestedFeatureModules: FeatureModule[] = [
   {
     group: "Medical & Aeromedical",
+    path: "/frames",
+    navLabel: "FRAMES",
+    title: "FRAMES (Fatigue Risk Assessment with Medical adviceS)",
+    description:
+      "Blueprint modul fatigue modern untuk deteksi dini, penilaian risiko, dan saran medis awak pesawat.",
+    icon: "🧭",
+  },
+  {
+    group: "Medical & Aeromedical",
     path: "/medical-profile",
     navLabel: "Profil Medis Aircrew",
     title: "Profil Medis Aircrew",

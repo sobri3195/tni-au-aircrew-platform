@@ -33,7 +33,7 @@ npm run dev
 - `/logbook` E-Logbook (functional)
 - `/orm` ORM Risk Assessment (functional)
 - `/training` Training & Currency Tracker (functional)
-- `/profile`, `/schedule`, `/weather`, `/notam`, `/duty-rest`, `/safety`, `/incident-workspace`, `/documents`, `/checklist`, `/medical`, `/fatigue`, `/inventory`, `/maintenance`, `/messaging`, `/reports`, `/admin`
+- `/profile`, `/schedule`, `/weather`, `/notam`, `/duty-rest`, `/safety`, `/incident-workspace`, `/documents`, `/checklist`, `/medical`, `/fatigue`, `/frames`, `/inventory`, `/maintenance`, `/messaging`, `/reports`, `/admin`
 
 ## Fitur inti
 
@@ -45,3 +45,8 @@ npm run dev
 - Export CSV/PDF client-side
 - Offline-first dasar via service worker + localStorage persistence
 - Mock dataset: profile, logbook (40), schedule (15), NOTAM (10), training (10), incident (10)
+
+## Modul Proposal FRAMES
+
+- Route `/frames` menampilkan blueprint pengembangan modul **FRAMES (Fatigue Risk Assessment with Medical adviceS)**.
+- Kontennya memuat usulan fitur, manfaat, cara kerja singkat, target pengguna, dan tahapan implementasi untuk penguatan manajemen fatigue awak pesawat.
