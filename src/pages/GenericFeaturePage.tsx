@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { moduleBlueprints } from '../data/moduleBlueprints';
+import { buildModuleAiProfiles } from '../data/moduleAiProfiles';
 import { getModuleCrudSchema } from '../data/moduleCrudSchemas';
 import { requestedFeatureModules } from '../data/featureModules';
 import { useRoleAccess } from '../hooks/useRoleAccess';
@@ -108,6 +109,7 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
   const moduleBlueprint = moduleBlueprints[location.pathname];
   const schema = useMemo(() => getModuleCrudSchema(location.pathname), [location.pathname]);
   const { canWriteCurrentRoute } = useRoleAccess();
+  const activeModuleMeta = moduleMetaMap[location.pathname] ?? { title, group: 'Core Module' };
 
   const [tasks, setTasks] = useLocalStorageState<ChecklistItem[]>(storageKey, defaultTask(location.pathname));
   const [records, setRecords] = useLocalStorageState<ModuleRecord[]>(crudStorageKey, []);
@@ -220,20 +222,26 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
     return matchStatus && matchSearch;
   }), [records, statusFilter, search]);
 
+  const moduleAiProfiles = useMemo(() => buildModuleAiProfiles({
+    path: location.pathname,
+    title: activeModuleMeta.title,
+    group: activeModuleMeta.group,
+    description
+  }), [activeModuleMeta.group, activeModuleMeta.title, description, location.pathname]);
+
   const aiInsight = useMemo(() => {
     const openTasks = tasks.filter((task) => !task.done);
     const confidence = Math.max(65, 95 - openTasks.length * 3);
 
-    const recommendations = [
-      { text: 'Prioritaskan task yang memengaruhi status fit-to-fly.', owner: 'Ops Officer' },
-      { text: 'Pastikan evidence dan approval sudah terlampir.', owner: 'Flight Safety Officer' },
-      { text: 'Review ulang dependency lintas medical-training-ops.', owner: 'Commander' }
-    ];
+    const recommendations = moduleAiProfiles.map((profile, index) => ({
+      text: `${profile.name}: ${profile.automation}.`,
+      owner: owners[index % owners.length]
+    }));
 
     const narrative = progress >= 80 ? 'Workflow hampir siap eksekusi.' : 'Masih ada dependency penting yang perlu ditutup.';
 
     return { confidence, recommendations, narrative };
-  }, [progress, tasks]);
+  }, [moduleAiProfiles, progress, tasks]);
 
   useEffect(() => {
     const moduleMeta = moduleMetaMap[location.pathname];
@@ -689,6 +697,34 @@ export const GenericFeaturePage = ({ title, description }: { title: string; desc
           </button>
           <p className="rounded-lg bg-slate-100 p-2 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">{moduleBlueprint?.slaTarget ?? 'SLA belum ditentukan untuk modul ini.'}</p>
         </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        {moduleAiProfiles.map((profile, index) => {
+          const toneStyles = profile.tone === 'sky'
+            ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-700/40 dark:bg-sky-900/20 dark:text-sky-100'
+            : profile.tone === 'emerald'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-700/40 dark:bg-emerald-900/20 dark:text-emerald-100'
+              : 'border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-700/40 dark:bg-violet-900/20 dark:text-violet-100';
+
+          return (
+            <div key={profile.id} className={`card border ${toneStyles}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] opacity-75">AI Modul {index + 1}</p>
+                  <h3 className="mt-1 font-semibold">{profile.name}</h3>
+                </div>
+                <Badge label={profile.role} tone={index === 0 ? 'blue' : index === 1 ? 'green' : 'slate'} />
+              </div>
+              <p className="mt-3 text-sm opacity-90">{profile.objective}</p>
+              <div className="mt-3 rounded-lg border border-current/15 bg-white/40 p-3 text-sm dark:bg-slate-950/20">
+                <p className="font-medium">Fokus AI</p>
+                <p className="mt-1 opacity-90">{profile.focus}</p>
+              </div>
+              <p className="mt-3 text-xs opacity-80">Automation: {profile.automation}</p>
+            </div>
+          );
+        })}
       </div>
 
       <div className="card">
