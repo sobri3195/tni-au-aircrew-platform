@@ -50,14 +50,6 @@ export const AppShell = () => {
       <main className="flex-1 min-w-0">
         <Topbar onMenuToggle={() => setMobileMenuOpen(true)} />
         <div className="mx-auto w-full max-w-[1400px] p-3 sm:p-4 lg:p-5">
-          <section className="mb-4 rounded-xl border border-sky-200 bg-sky-50/90 p-3 text-sm text-sky-900 shadow-sm dark:border-sky-800/70 dark:bg-sky-950/40 dark:text-sky-100">
-            <p className="font-semibold">Mode Frontend (Tanpa Backend)</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs sm:text-sm">
-              <li>Semua form bisa langsung diinput dan disimpan otomatis ke <span className="font-semibold">Local Storage browser</span>.</li>
-              <li>Tidak memerlukan API/server database untuk create, update, atau delete data.</li>
-              <li>Data tetap ada saat halaman di-refresh pada browser yang sama, dan dapat berubah jika Local Storage dibersihkan.</li>
-            </ul>
-          </section>
           <Outlet />
         </div>
       </main>
