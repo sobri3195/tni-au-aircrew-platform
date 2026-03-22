@@ -6,6 +6,7 @@ import { AdminPanelPage } from './pages/AdminPanelPage';
 import { AppShell } from './components/layout/AppShell';
 import { DashboardPage } from './pages/DashboardPage';
 import { GenericFeaturePage } from './pages/GenericFeaturePage';
+import { FramesPage } from './pages/FramesPage';
 import { LoginPage } from './pages/LoginPage';
 import { MissionLifecyclePage } from './pages/MissionLifecyclePage';
 import { LogbookPage } from './pages/LogbookPage';
@@ -42,7 +43,7 @@ const coreFeatureRoutes = [
   { path: '/career-path', title: 'Pilot Career Path Planner', description: 'Perencanaan jenjang kualifikasi penerbang dari basic mission ke mission commander.' }
 ];
 
-const routes = [...coreFeatureRoutes, ...requestedFeatureModules].filter((route) => route.path !== '/mission-intake-hub');
+const routes = [...coreFeatureRoutes, ...requestedFeatureModules].filter((route) => !['/mission-intake-hub', '/frames'].includes(route.path));
 
 const ProtectedRoute = ({ path, element }: { path: string; element: JSX.Element }) => {
   const { state } = useApp();
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/rikkes" element={<ProtectedRoute path="/rikkes" element={<RikkesPage />} />} />
           <Route path="/admin" element={<ProtectedRoute path="/admin" element={<AdminPanelPage />} />} />
           <Route path="/mission-intake-hub" element={<ProtectedRoute path="/mission-intake-hub" element={<MissionLifecyclePage />} />} />
+          <Route path="/frames" element={<ProtectedRoute path="/frames" element={<FramesPage />} />} />
           {routes.map((route) => (
             <Route
               key={route.path}
