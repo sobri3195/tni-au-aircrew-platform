@@ -10,6 +10,10 @@ import { requestedFeatureModules } from "../data/featureModules";
 import { useRoleAccess } from "../hooks/useRoleAccess";
 import { exportCsv, exportSimplePdf } from "../utils/export";
 import { useApp } from "../contexts/AppContext";
+import {
+  ModuleSyncSummary,
+  SHARED_MODULE_SYNC_STORAGE_KEY,
+} from "../utils/moduleSync";
 
 type ChecklistItem = {
   id: string;
@@ -26,16 +30,6 @@ type ModuleRecord = {
   updatedAt: string;
 };
 
-type ModuleSyncSummary = {
-  path: string;
-  title: string;
-  group: string;
-  progress: number;
-  openTasks: number;
-  totalRecords: number;
-  openRecords: number;
-  updatedAt: string;
-};
 
 type FlowStage = {
   name: string;
@@ -80,7 +74,6 @@ const owners = [
   "Medical",
   "Commander",
 ];
-const sharedModuleStorageKey = "feature-module-sync-v1";
 const moduleMetaMap = Object.fromEntries(
   requestedFeatureModules.map((module) => [
     module.path,
@@ -193,7 +186,7 @@ export const GenericFeaturePage = ({
   );
   const [moduleSyncMap, setModuleSyncMap] = useLocalStorageState<
     Record<string, ModuleSyncSummary>
-  >(sharedModuleStorageKey, {});
+  >(SHARED_MODULE_SYNC_STORAGE_KEY, {});
   const [editId, setEditId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [statusValue, setStatusValue] = useState(
@@ -1016,7 +1009,7 @@ export const GenericFeaturePage = ({
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-semibold">Koneksi Antar Modul (localStorage)</h3>
           <p className="text-xs text-slate-500">
-            Shared key: {sharedModuleStorageKey}
+            Shared key: {SHARED_MODULE_SYNC_STORAGE_KEY}
           </p>
         </div>
         {relatedModuleSummaries.length === 0 ? (

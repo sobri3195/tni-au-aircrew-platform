@@ -14,6 +14,11 @@ import {
   calculateRikkesSummary,
 } from "../data/rikkesData";
 import { Modal } from "../components/ui/Modal";
+import {
+  getModuleOperationalStatus,
+  ModuleSyncSummary,
+  SHARED_MODULE_SYNC_STORAGE_KEY,
+} from "../utils/moduleSync";
 
 const Card = ({
   label,
@@ -374,6 +379,10 @@ export const DashboardPage = () => {
   );
   const [acknowledgedSafetyAlerts, setAcknowledgedSafetyAlerts] =
     useLocalStorageState<string[]>("predictive-safety-ack-v1", []);
+  const [moduleSyncMap] = useLocalStorageState<Record<string, ModuleSyncSummary>>(
+    SHARED_MODULE_SYNC_STORAGE_KEY,
+    {},
+  );
   const [overrideTarget, setOverrideTarget] = useState(
     state.profiles[0]?.id ?? "P001",
   );
@@ -464,6 +473,28 @@ export const DashboardPage = () => {
   }));
 
   const missionState = statusTone(readinessScore);
+
+  const moduleExecutionBoard = useMemo(() => {
+    const entries = Object.values(moduleSyncMap)
+      .map((item) => ({
+        ...item,
+        status: getModuleOperationalStatus(item),
+        blockerCount: item.openTasks + item.openRecords,
+      }))
+      .sort((a, b) => a.progress - b.progress || b.blockerCount - a.blockerCount);
+
+    const atRiskCount = entries.filter((item) => item.status.label === "At Risk").length;
+    const avgProgress = entries.length
+      ? Math.round(entries.reduce((sum, item) => sum + item.progress, 0) / entries.length)
+      : 0;
+
+    return {
+      entries,
+      atRiskCount,
+      avgProgress,
+      focusList: entries.slice(0, 3),
+    };
+  }, [moduleSyncMap]);
 
   const aiCopilot = useMemo(() => {
     const unackedNotam = state.notams.filter(
@@ -599,6 +630,63 @@ export const DashboardPage = () => {
         <Card label="Aircraft Availability" value={kpi.aircraftAvailability} />
         <Card label="Medical Validity" value={kpi.medicalValidity} />
         <Card label="Currency Status" value={kpi.currency} />
+      </div>
+
+      <div className="card border-slate-200/80 bg-white/90 backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/80">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-slate-500">Module Recovery Focus</p>
+            <h3 className="text-lg font-semibold">Prioritas penyempurnaan lintas fitur</h3>
+            <p className="text-sm text-slate-500">
+              Memunculkan modul dengan progress terendah agar komandir/ops officer tahu bagian mana yang perlu dituntaskan lebih dulu.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              label={`${moduleExecutionBoard.avgProgress}% avg progress`}
+              tone={moduleExecutionBoard.avgProgress >= 80 ? "green" : moduleExecutionBoard.avgProgress >= 55 ? "yellow" : "red"}
+            />
+            <Badge
+              label={`${moduleExecutionBoard.atRiskCount} at risk`}
+              tone={moduleExecutionBoard.atRiskCount > 0 ? "red" : "green"}
+            />
+          </div>
+        </div>
+        {moduleExecutionBoard.focusList.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">
+            Belum ada modul generik yang memiliki data operasional. Jalankan salah satu modul penyempurnaan agar command center dapat memprioritaskan perbaikannya.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            {moduleExecutionBoard.focusList.map((item) => (
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className="rounded-xl border border-slate-200 p-4 text-left transition hover:border-sky-300 hover:bg-sky-50/60 dark:border-slate-700 dark:hover:border-sky-700 dark:hover:bg-slate-950"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{item.title}</p>
+                    <p className="text-xs text-slate-500">{item.group}</p>
+                  </div>
+                  <Badge label={item.status.label} tone={item.status.tone} />
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                  <div
+                    className={`h-full rounded-full ${item.progress >= 80 ? "bg-emerald-500" : item.progress >= 55 ? "bg-amber-500" : "bg-rose-500"}`}
+                    style={{ width: `${Math.min(item.progress, 100)}%` }}
+                  />
+                </div>
+                <div className="mt-3 grid gap-2 text-xs text-slate-500">
+                  <span>Progress {item.progress}%</span>
+                  <span>{item.blockerCount} blocker aktif • {item.totalRecords} record</span>
+                  <span>Klik untuk lanjutkan pengerjaan modul.</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
