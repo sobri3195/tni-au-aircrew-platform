@@ -1,11 +1,13 @@
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+const supabasePublishableKey =
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY as string | undefined);
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
 
 const ensureConfig = () => {
   if (!supabaseUrl || !supabasePublishableKey) {
-    throw new Error('Supabase belum dikonfigurasi. Isi VITE_SUPABASE_URL dan VITE_SUPABASE_PUBLISHABLE_KEY di file .env.');
+    throw new Error('Supabase belum dikonfigurasi. Isi VITE_SUPABASE_URL dan VITE_SUPABASE_PUBLISHABLE_KEY (atau VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY) di file .env.');
   }
 
   return { supabaseUrl, supabasePublishableKey };
