@@ -21,7 +21,7 @@ npm run dev
 
 ## Integrasi Supabase (Opsional, Hybrid)
 
-Project ini saat ini frontend-only dan menyimpan state ke localStorage. Untuk migrasi bertahap ke backend gratis Supabase, gunakan panduan:
+Project ini saat ini frontend-only dan menyimpan state ke localStorage. Untuk migrasi bertahap ke backend gratis Supabase, gunakan panduan (mulai dari **buat akun**, buat project, ambil API key, sampai integrasi Codex):
 
 - `docs/supabase-codex-guide.md`
 

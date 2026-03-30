@@ -16,19 +16,42 @@ Dokumen ini dibuat berdasarkan analisis codebase saat ini:
 Dampak untuk integrasi Supabase:
 - Kita bisa mulai dengan pola **hybrid**: localStorage tetap jalan (offline-first), lalu sinkronisasi ke Supabase bertahap.
 
-## 2) Prasyarat
+## 2) Langkah dari nol: buat akun sampai dapat kredensial
 
-1. Buat project di Supabase, lalu simpan:
+### 2.1 Buat akun Supabase
+
+1. Buka `https://supabase.com/`.
+2. Klik **Start your project** lalu login (GitHub/Google/Email).
+3. Jika diminta, buat **organization** baru.
+
+### 2.2 Buat project baru
+
+1. Klik **New project**.
+2. Pilih organization.
+3. Isi:
+   - **Name**: misal `tni-au-aircrew-platform`
+   - **Database Password**: buat password kuat (simpan di password manager)
+   - **Region**: pilih yang paling dekat user utama (mis. Singapore untuk Indonesia)
+4. Klik **Create new project** dan tunggu provisioning selesai.
+
+### 2.3 Ambil API credentials
+
+1. Masuk ke project dashboard.
+2. Buka **Project Settings** → **API**.
+3. Salin nilai berikut:
    - `Project URL`
-   - `anon public key`
-2. Di root repo, buat file `.env`:
+   - `anon public key` (label `anon` / `publishable`)
+
+> Jangan gunakan `service_role` key di frontend.
+
+### 2.4 Simpan ke `.env` aplikasi
+
+Di root repo, buat file `.env`:
 
 ```bash
 VITE_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
 VITE_SUPABASE_ANON_KEY="YOUR_ANON_KEY"
 ```
-
-> Jangan letakkan `service_role` key di frontend.
 
 ## 3) Instal dependency
 
@@ -53,7 +76,33 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
-## 5) Strategi migrasi bertahap (disarankan)
+## 5) Setup database awal (langsung dari dashboard)
+
+### Opsi A — lewat SQL Editor (paling cepat)
+
+1. Di Supabase dashboard, buka **SQL Editor**.
+2. Klik **New query**.
+3. Paste SQL berikut lalu jalankan:
+
+```sql
+create table if not exists logbook_entries (
+  id text primary key,
+  pilot text not null,
+  aircraft text not null,
+  mission_type text not null,
+  duration_minutes int not null,
+  date date not null,
+  created_at timestamptz default now()
+);
+```
+
+### Opsi B — lewat Table Editor
+
+1. Buka **Table Editor** → **Create a new table**.
+2. Isi nama tabel `logbook_entries`.
+3. Tambahkan kolom sesuai kebutuhan aplikasi.
+
+## 6) Strategi migrasi bertahap (disarankan)
 
 ### Tahap A — Read-only dari Supabase (aman)
 - Mulai dari modul kecil (misal `logbook`) untuk membaca data dari Supabase saat halaman dibuka.
@@ -67,7 +116,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 - Setelah stabil, jadikan Supabase sebagai sumber utama.
 - localStorage dipakai sebagai cache/offline snapshot.
 
-## 6) Contoh tabel awal (SQL)
+## 7) Contoh tabel awal (SQL)
 
 ```sql
 create table if not exists logbook_entries (
@@ -83,7 +132,7 @@ create table if not exists logbook_entries (
 
 > Sesuaikan kolom dengan interface TypeScript `LogbookEntry` di project.
 
-## 7) Contoh query di kode React
+## 8) Contoh query di kode React
 
 ```ts
 import { supabase } from '../lib/supabase';
@@ -99,7 +148,7 @@ export const fetchLogbook = async () => {
 };
 ```
 
-## 8) Prompt Codex yang bisa dipakai langsung
+## 9) Prompt Codex yang bisa dipakai langsung
 
 Gunakan prompt berikut di Codex agar perubahan rapi dan incremental:
 
@@ -115,7 +164,7 @@ Gunakan prompt berikut di Codex agar perubahan rapi dan incremental:
 
 > Buat SQL migration untuk aktifkan RLS pada `logbook_entries`, policy: user hanya bisa baca/tulis data miliknya (`auth.uid() = user_id`). Tambahkan kolom `user_id uuid not null` dan index terkait.
 
-## 9) Checklist verifikasi
+## 10) Checklist verifikasi
 
 1. `npm run dev` jalan.
 2. Env Supabase terbaca (tidak throw error init).
@@ -123,7 +172,7 @@ Gunakan prompt berikut di Codex agar perubahan rapi dan incremental:
 4. Jika internet dimatikan, app tetap bisa dibuka (fallback localStorage).
 5. Tidak ada key sensitif (service role) di frontend.
 
-## 10) Catatan keamanan penting
+## 11) Catatan keamanan penting
 
 - Pastikan semua tabel publik yang diakses frontend mengaktifkan **Row Level Security (RLS)**.
 - Jangan andalkan anon key sebagai proteksi data; proteksi utama adalah RLS policy.
