@@ -1,16 +1,21 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { useApp } from '../contexts/AppContext';
 import { Table } from '../components/ui/Table';
 import { formatDate } from '../utils/date';
 import { useMasterData } from '../hooks/useMasterData';
 import { useRoleAccess } from '../hooks/useRoleAccess';
+import type { LogbookEntry } from '../types';
+import { createLogbookEntry, deleteLogbookEntry, fetchLogbookEntries, updateLogbookEntry } from '../lib/logbookApi';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 export const LogbookPage = () => {
   const { state, dispatch } = useApp();
   const { masterData } = useMasterData();
   const { canDoAction } = useRoleAccess();
   const canAddLogbook = canDoAction('ADD_LOGBOOK');
+  const [syncMessage, setSyncMessage] = useState('');
+  const [isLoadingSupabase, setIsLoadingSupabase] = useState(false);
   const [form, setForm] = useLocalStorageState('draft-logbook-form', {
     aircraft: 'F-16C TS-1601',
     sortieType: 'Training',
@@ -21,6 +26,28 @@ export const LogbookPage = () => {
     remarks: ''
   });
   const search = state.globalSearch.trim().toLowerCase();
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setSyncMessage('Supabase belum aktif. App tetap berjalan dengan local storage.');
+      return;
+    }
+
+    const load = async () => {
+      setIsLoadingSupabase(true);
+      try {
+        const data = await fetchLogbookEntries();
+        dispatch({ type: 'SET_LOGBOOK', payload: data });
+        setSyncMessage(`Terhubung ke Supabase. ${data.length} data logbook berhasil dimuat.`);
+      } catch (error) {
+        setSyncMessage(`Gagal ambil data Supabase: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setIsLoadingSupabase(false);
+      }
+    };
+
+    load();
+  }, [dispatch]);
 
   useEffect(() => {
     if (!masterData.aircraft.includes(form.aircraft)) {
@@ -55,6 +82,80 @@ export const LogbookPage = () => {
     return rows.filter((item) => `${item.aircraft} ${item.sortieType} ${item.dayNight} ${item.remarks}`.toLowerCase().includes(search));
   }, [search, state.logbook]);
 
+  const submitAdd = async () => {
+    if (!canAddLogbook || validationError) {
+      return;
+    }
+
+    const entry: LogbookEntry = {
+      id: `L${Date.now()}`,
+      pilotId: 'P001',
+      date: new Date().toISOString(),
+      aircraft: form.aircraft,
+      sortieType: form.sortieType,
+      duration: Number(form.duration),
+      dayNight: form.dayNight as 'Day' | 'Night',
+      ifr: form.ifr,
+      nvg: form.nvg,
+      remarks: form.remarks
+    };
+
+    if (!isSupabaseConfigured) {
+      dispatch({ type: 'ADD_LOGBOOK', payload: entry });
+      setSyncMessage('Data ditambah ke local storage. Hubungkan Supabase untuk sync cloud.');
+      return;
+    }
+
+    try {
+      const created = await createLogbookEntry(entry);
+      dispatch({ type: 'ADD_LOGBOOK', payload: created });
+      setSyncMessage(`Insert berhasil ke Supabase (ID: ${created.id}).`);
+    } catch (error) {
+      setSyncMessage(`Insert gagal: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const submitDelete = async (entryId: string) => {
+    if (!canAddLogbook) return;
+
+    if (!isSupabaseConfigured) {
+      dispatch({ type: 'DELETE_LOGBOOK', payload: entryId });
+      setSyncMessage('Data dihapus dari local storage.');
+      return;
+    }
+
+    try {
+      await deleteLogbookEntry(entryId);
+      dispatch({ type: 'DELETE_LOGBOOK', payload: entryId });
+      setSyncMessage(`Delete berhasil untuk ID ${entryId}.`);
+    } catch (error) {
+      setSyncMessage(`Delete gagal: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const submitQuickUpdate = async (item: LogbookEntry) => {
+    if (!canAddLogbook) return;
+
+    const newRemarks = window.prompt('Update remarks', item.remarks);
+    if (newRemarks === null) return;
+
+    const updatedEntry = { ...item, remarks: newRemarks };
+
+    if (!isSupabaseConfigured) {
+      dispatch({ type: 'UPDATE_LOGBOOK', payload: updatedEntry });
+      setSyncMessage('Data diupdate di local storage.');
+      return;
+    }
+
+    try {
+      const updated = await updateLogbookEntry(updatedEntry);
+      dispatch({ type: 'UPDATE_LOGBOOK', payload: updated });
+      setSyncMessage(`Update berhasil untuk ID ${updated.id}.`);
+    } catch (error) {
+      setSyncMessage(`Update gagal: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   return (
     <section className="space-y-4">
       <h2 className="text-xl font-bold">E-Logbook</h2>
@@ -62,29 +163,7 @@ export const LogbookPage = () => {
         <div className="card">Total Jam: {totals.total}</div>
         <div className="card">Jam Night: {totals.night}</div>
         <div className="card">Jam IFR: {totals.ifr}</div>
-        <button
-          className="rounded-xl bg-sky-700 px-3 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={Boolean(validationError) || !canAddLogbook}
-          onClick={() => {
-            if (!canAddLogbook) return;
-            const id = `L${state.logbook.length + 1}`;
-            dispatch({
-              type: 'ADD_LOGBOOK',
-              payload: {
-                id,
-                pilotId: 'P001',
-                date: new Date().toISOString(),
-                aircraft: form.aircraft,
-                sortieType: form.sortieType,
-                duration: Number(form.duration),
-                dayNight: form.dayNight as 'Day' | 'Night',
-                ifr: form.ifr,
-                nvg: form.nvg,
-                remarks: form.remarks
-              }
-            });
-          }}
-        >
+        <button className="rounded-xl bg-sky-700 px-3 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" disabled={Boolean(validationError) || !canAddLogbook} onClick={submitAdd}>
           Add Flight
         </button>
       </div>
@@ -114,7 +193,8 @@ export const LogbookPage = () => {
       </div>
       {!canAddLogbook && <p className="text-sm text-amber-600">Role saat ini hanya bisa melihat logbook.</p>}
       {validationError && <p className="text-sm text-rose-600">{validationError}</p>}
-      <Table headers={['Date', 'Aircraft', 'Type', 'Duration', 'Day/Night', 'IFR', 'NVG', 'Remarks']}>
+      <p className="text-sm text-slate-500">{isLoadingSupabase ? 'Memuat data dari Supabase...' : syncMessage}</p>
+      <Table headers={['Date', 'Aircraft', 'Type', 'Duration', 'Day/Night', 'IFR', 'NVG', 'Remarks', 'Aksi']}>
         {visibleRows.map((item) => (
           <tr key={item.id} className="border-t border-slate-200 dark:border-slate-700">
             <td className="px-3 py-2">{formatDate(item.date)}</td>
@@ -125,11 +205,21 @@ export const LogbookPage = () => {
             <td className="px-3 py-2">{item.ifr ? 'Yes' : 'No'}</td>
             <td className="px-3 py-2">{item.nvg ? 'Yes' : 'No'}</td>
             <td className="px-3 py-2">{item.remarks}</td>
+            <td className="px-3 py-2">
+              <div className="flex gap-2">
+                <button className="rounded bg-slate-200 px-2 py-1 text-xs dark:bg-slate-700" disabled={!canAddLogbook} onClick={() => submitQuickUpdate(item)}>
+                  Edit
+                </button>
+                <button className="rounded bg-rose-600 px-2 py-1 text-xs text-white disabled:opacity-60" disabled={!canAddLogbook} onClick={() => submitDelete(item.id)}>
+                  Delete
+                </button>
+              </div>
+            </td>
           </tr>
         ))}
         {visibleRows.length === 0 && (
           <tr>
-            <td className="px-3 py-5 text-center text-sm text-slate-500" colSpan={8}>
+            <td className="px-3 py-5 text-center text-sm text-slate-500" colSpan={9}>
               Tidak ada data logbook yang sesuai dengan global search.
             </td>
           </tr>
