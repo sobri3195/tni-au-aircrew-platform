@@ -53,6 +53,29 @@ VITE_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
 VITE_SUPABASE_ANON_KEY="YOUR_ANON_KEY"
 ```
 
+## 2.5 Connection string database (copy dari Supabase)
+
+Jika kamu perlu akses langsung ke Postgres (misalnya via psql, migration tool, atau SQL client), gunakan format berikut:
+
+- host: `db.ghymynufjfazifhqitqy.supabase.co`
+- port: `5432`
+- database: `postgres`
+- user: `postgres`
+
+```bash
+postgresql://postgres:[YOUR-PASSWORD]@db.ghymynufjfazifhqitqy.supabase.co:5432/postgres
+```
+
+> Ganti `[YOUR-PASSWORD]` dengan database password project Supabase kamu.
+
+## 2.6 Install Agent Skills (opsional)
+
+Agar AI coding agent (mis. Codex) lebih akurat saat bekerja dengan Supabase, kamu bisa install Supabase Agent Skills:
+
+```bash
+npx skills add supabase/agent-skills
+```
+
 ## 3) Instal dependency
 
 ```bash
