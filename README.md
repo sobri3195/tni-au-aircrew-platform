@@ -18,6 +18,26 @@ npm run dev
 - Data akan tetap ada saat refresh selama Local Storage browser tidak dibersihkan.
 - Untuk reset data, hapus Local Storage aplikasi dari browser.
 
+
+## Integrasi Supabase (Opsional, Hybrid)
+
+Project ini saat ini frontend-only dan menyimpan state ke localStorage. Untuk migrasi bertahap ke backend gratis Supabase, gunakan panduan:
+
+- `docs/supabase-codex-guide.md`
+
+Ringkas setup awal:
+
+```bash
+npm install @supabase/supabase-js
+```
+
+Tambahkan `.env`:
+
+```bash
+VITE_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
+VITE_SUPABASE_ANON_KEY="YOUR_ANON_KEY"
+```
+
 ## Arsitektur Folder
 
 - `src/components` : komponen reusable dan layout (Sidebar/Topbar/Table/Modal/Badge/Toast/Timeline)
