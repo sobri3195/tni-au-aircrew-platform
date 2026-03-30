@@ -11,7 +11,10 @@ type Action =
   | { type: 'SET_THEME'; payload: Theme }
   | { type: 'SET_MISSION_PROFILE'; payload: MissionProfile }
   | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'SET_LOGBOOK'; payload: LogbookEntry[] }
   | { type: 'ADD_LOGBOOK'; payload: LogbookEntry }
+  | { type: 'UPDATE_LOGBOOK'; payload: LogbookEntry }
+  | { type: 'DELETE_LOGBOOK'; payload: string }
   | { type: 'ADD_SCHEDULE'; payload: ScheduleItem }
   | { type: 'ADD_ORM'; payload: OrmAssessment }
   | { type: 'ADD_TRAINING'; payload: TrainingItem }
@@ -58,9 +61,25 @@ const reducer = (state: AppState, action: Action): AppState => {
       );
     case 'SET_SEARCH':
       return { ...state, globalSearch: action.payload };
+    case 'SET_LOGBOOK':
+      return { ...state, logbook: action.payload };
     case 'ADD_LOGBOOK':
       return denyIfNoAccess('ADD_LOGBOOK', () =>
         pushAudit({ ...state, logbook: [action.payload, ...state.logbook] }, { action: 'CREATE', entity: 'Logbook', detail: action.payload.id, role: state.role })
+      );
+    case 'UPDATE_LOGBOOK':
+      return denyIfNoAccess('ADD_LOGBOOK', () =>
+        pushAudit(
+          { ...state, logbook: state.logbook.map((item) => (item.id === action.payload.id ? action.payload : item)) },
+          { action: 'UPDATE', entity: 'Logbook', detail: action.payload.id, role: state.role }
+        )
+      );
+    case 'DELETE_LOGBOOK':
+      return denyIfNoAccess('ADD_LOGBOOK', () =>
+        pushAudit(
+          { ...state, logbook: state.logbook.filter((item) => item.id !== action.payload) },
+          { action: 'DELETE', entity: 'Logbook', detail: action.payload, role: state.role }
+        )
       );
     case 'ADD_SCHEDULE':
       return denyIfNoAccess('ADD_SCHEDULE', () =>

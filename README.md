@@ -18,7 +18,6 @@ npm run dev
 - Data akan tetap ada saat refresh selama Local Storage browser tidak dibersihkan.
 - Untuk reset data, hapus Local Storage aplikasi dari browser.
 
-
 ## Integrasi Supabase (Opsional, Hybrid)
 
 Project ini saat ini frontend-only dan menyimpan state ke localStorage. Untuk migrasi bertahap ke backend gratis Supabase, gunakan panduan (mulai dari **buat akun**, buat project, ambil API key, sampai integrasi Codex):
@@ -27,15 +26,31 @@ Project ini saat ini frontend-only dan menyimpan state ke localStorage. Untuk mi
 
 Ringkas setup awal:
 
-```bash
-npm install @supabase/supabase-js
-```
-
-Tambahkan `.env`:
+1. Buat file `.env` dari `.env.example`.
+2. Isi kredensial Supabase publishable key:
 
 ```bash
 VITE_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
-VITE_SUPABASE_ANON_KEY="YOUR_ANON_KEY"
+VITE_SUPABASE_PUBLISHABLE_KEY="YOUR_PUBLISHABLE_KEY"
+```
+
+Contoh publishable key yang Anda kirim bisa dipakai di `VITE_SUPABASE_PUBLISHABLE_KEY`. **Jangan** menaruh `secret key` Supabase di frontend.
+
+SQL tabel minimal untuk CRUD logbook:
+
+```sql
+create table if not exists logbook_entries (
+  id text primary key,
+  pilot_id text not null,
+  date timestamptz not null,
+  aircraft text not null,
+  sortie_type text not null,
+  duration numeric not null,
+  day_night text not null check (day_night in ('Day', 'Night')),
+  ifr boolean not null default false,
+  nvg boolean not null default false,
+  remarks text not null default ''
+);
 ```
 
 ## Arsitektur Folder
