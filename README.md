@@ -53,6 +53,32 @@ create table if not exists logbook_entries (
 );
 ```
 
+SQL tabel tambahan agar **seluruh modul generic** (halaman `GenericFeaturePage`) bisa CRUD + sinkron ke Supabase:
+
+```sql
+create table if not exists module_records (
+  id text primary key,
+  module_path text not null,
+  status text not null default 'Open',
+  values jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_module_records_module_path on module_records(module_path);
+
+create table if not exists module_tasks (
+  id text primary key,
+  module_path text not null,
+  text text not null,
+  done boolean not null default false,
+  owner text not null default 'Ops Officer',
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_module_tasks_module_path on module_tasks(module_path);
+```
+
 ## Arsitektur Folder
 
 - `src/components` : komponen reusable dan layout (Sidebar/Topbar/Table/Modal/Badge/Toast/Timeline)

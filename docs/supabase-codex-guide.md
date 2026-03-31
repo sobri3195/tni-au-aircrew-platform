@@ -50,7 +50,7 @@ Di root repo, buat file `.env`:
 
 ```bash
 VITE_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
-VITE_SUPABASE_ANON_KEY="YOUR_ANON_KEY"
+VITE_SUPABASE_PUBLISHABLE_KEY="YOUR_PUBLISHABLE_KEY"
 ```
 
 ## 2.5 Connection string database (copy dari Supabase)
@@ -153,7 +153,33 @@ create table if not exists logbook_entries (
 );
 ```
 
-> Sesuaikan kolom dengan interface TypeScript `LogbookEntry` di project.
+Tambahkan juga tabel generic agar semua modul berbasis `GenericFeaturePage` bisa CRUD:
+
+```sql
+create table if not exists module_records (
+  id text primary key,
+  module_path text not null,
+  status text not null default 'Open',
+  values jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_module_records_module_path on module_records(module_path);
+
+create table if not exists module_tasks (
+  id text primary key,
+  module_path text not null,
+  text text not null,
+  done boolean not null default false,
+  owner text not null default 'Ops Officer',
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_module_tasks_module_path on module_tasks(module_path);
+```
+
+> Sesuaikan kolom dengan interface TypeScript di project (`LogbookEntry`, `ModuleRecord`, dan `ChecklistItem`).
 
 ## 8) Contoh query di kode React
 

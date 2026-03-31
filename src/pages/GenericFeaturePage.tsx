@@ -14,6 +14,13 @@ import {
   ModuleSyncSummary,
   SHARED_MODULE_SYNC_STORAGE_KEY,
 } from "../utils/moduleSync";
+import { isSupabaseConfigured } from "../lib/supabase";
+import {
+  fetchModuleRecords,
+  fetchModuleTasks,
+  upsertModuleRecords,
+  upsertModuleTasks,
+} from "../lib/genericModuleApi";
 
 type ChecklistItem = {
   id: string;
@@ -193,6 +200,7 @@ export const GenericFeaturePage = ({
     schema.defaultStatus ?? schema.statuses?.[0] ?? "Open",
   );
   const [formError, setFormError] = useState("");
+  const [syncMessage, setSyncMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const exportRecordDataset = () => {
@@ -291,6 +299,88 @@ export const GenericFeaturePage = ({
     setTasks,
     storageKey,
   ]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setSyncMessage("Supabase belum aktif. Modul tetap jalan via local storage.");
+      return;
+    }
+
+    let isCancelled = false;
+    const loadFromSupabase = async () => {
+      try {
+        const [remoteRecords, remoteTasks] = await Promise.all([
+          fetchModuleRecords(location.pathname),
+          fetchModuleTasks(location.pathname),
+        ]);
+
+        if (isCancelled) return;
+
+        if (remoteRecords.length > 0) {
+          setRecords(remoteRecords);
+        }
+        if (remoteTasks.length > 0) {
+          setTasks(remoteTasks);
+        }
+
+        setSyncMessage(
+          `Supabase aktif. ${remoteRecords.length} record & ${remoteTasks.length} task tersinkron.`,
+        );
+      } catch (error) {
+        if (isCancelled) return;
+        setSyncMessage(
+          `Sinkronisasi Supabase gagal: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    };
+
+    loadFromSupabase();
+    return () => {
+      isCancelled = true;
+    };
+  }, [location.pathname, setRecords, setTasks]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        await upsertModuleRecords(location.pathname, records);
+        setSyncMessage((prev) =>
+          prev.startsWith("Sinkronisasi Supabase gagal")
+            ? "Supabase aktif. Sinkronisasi record berhasil dipulihkan."
+            : prev,
+        );
+      } catch (error) {
+        setSyncMessage(
+          `Sinkronisasi Supabase gagal: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    }, 600);
+
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, records]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        await upsertModuleTasks(location.pathname, tasks);
+        setSyncMessage((prev) =>
+          prev.startsWith("Sinkronisasi Supabase gagal")
+            ? "Supabase aktif. Sinkronisasi task berhasil dipulihkan."
+            : prev,
+        );
+      } catch (error) {
+        setSyncMessage(
+          `Sinkronisasi Supabase gagal: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    }, 600);
+
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, tasks]);
 
   const doneTask = tasks.filter((task) => task.done).length;
   const progress = Math.round((doneTask / Math.max(tasks.length, 1)) * 100);
@@ -623,6 +713,7 @@ export const GenericFeaturePage = ({
             tone={progress >= 80 ? "green" : progress >= 50 ? "yellow" : "red"}
           />
         </div>
+        <p className="mt-2 text-xs text-sky-100/90">{syncMessage}</p>
       </div>
 
       {!canWriteCurrentRoute && (
